@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Halle's Heart Journal</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      display: block;
+      padding: clamp(32px, 8vw, 64px);
+    }
+
+    .journal-wrapper {
+      max-width: 840px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      border: 3px solid var(--rose-border);
+      box-shadow: 0 22px 46px var(--rose-shadow);
+      padding: clamp(32px, 6vw, 60px);
+      font-family: 'Quicksand', 'Segoe UI', sans-serif;
+      color: var(--text-main);
+    }
+
+    .journal-wrapper h1 {
+      font-family: 'Dancing Script', 'Quicksand', cursive;
+      color: var(--text-heading);
+      font-size: clamp(2.2rem, 5vw, 3rem);
+      margin: 0 0 24px;
+      text-align: center;
+    }
+
+    .journal-streak {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(255, 249, 252, 0.96);
+      border: 2px solid rgba(255, 159, 197, 0.36);
+      border-radius: 14px;
+      padding: 10px 14px;
+      margin: 0 auto 16px auto;
+      width: fit-content;
+      box-shadow: 0 12px 24px rgba(255, 159, 197, 0.18);
+    }
+
+    .journal-streak__icon {
+      font-size: 1.3rem;
+    }
+
+    .journal-streak__text {
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text-heading);
+      font-size: clamp(0.94rem, 2.2vw, 1.06rem);
+    }
+
+    .journal-streak__best {
+      font-weight: 600;
+      color: rgba(113, 92, 89, 0.8);
+      font-size: clamp(0.84rem, 1.8vw, 0.96rem);
+      margin-left: 8px;
+    }
+
+    .journal-wrapper p {
+      font-size: clamp(1rem, 2.3vw, 1.16rem);
+      line-height: 1.7;
+      margin: 0 0 clamp(16px, 3vw, 24px);
+    }
+
+    .journal-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6em;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: clamp(0.84rem, 2vw, 0.96rem);
+      color: var(--text-heading);
+      text-decoration: none;
+      margin-bottom: clamp(18px, 4vw, 28px);
+    }
+
+    .journal-back::before {
+      content: '\2190';
+      font-size: 1.1em;
+    }
+
+    .journal-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2.3fr) minmax(0, 1.2fr);
+      gap: clamp(24px, 5vw, 36px);
+      align-items: flex-start;
+    }
+
+    .journal-compose,
+    .journal-history {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: var(--radius-md);
+      border: 2px solid rgba(255, 193, 214, 0.55);
+      box-shadow: 0 16px 36px rgba(255, 159, 197, 0.18);
+      padding: clamp(22px, 4.8vw, 32px);
+    }
+
+    .journal-compose h2,
+    .journal-history h2 {
+      margin: 0 0 clamp(14px, 3vw, 20px);
+      font-size: clamp(1.4rem, 3vw, 1.9rem);
+      color: var(--text-heading);
+      font-family: 'Dancing Script', 'Quicksand', cursive;
+    }
+
+    .journal-form {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(12px, 2.6vw, 18px);
+    }
+
+    .journal-form label {
+      font-size: clamp(0.9rem, 2vw, 1.05rem);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--text-main);
+    }
+
+    .journal-form input[type="date"],
+    .journal-form textarea,
+    .journal-form select {
+      width: 100%;
+      border-radius: 14px;
+      border: 2px solid rgba(255, 159, 197, 0.42);
+      background: rgba(255, 255, 255, 0.96);
+      font-size: clamp(1rem, 2.3vw, 1.1rem);
+      font-family: 'Quicksand', 'Segoe UI', sans-serif;
+      padding: clamp(12px, 2.6vw, 16px);
+      color: var(--text-main);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .journal-form textarea {
+      min-height: clamp(180px, 32vw, 260px);
+      resize: vertical;
+      line-height: 1.7;
+    }
+
+    .journal-form input[type="date"]:focus,
+    .journal-form textarea:focus {
+      outline: none;
+      border-color: rgba(255, 159, 197, 0.8);
+      box-shadow: 0 0 0 4px rgba(255, 159, 197, 0.2);
+    }
+
+    .journal-mood {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 2vw, 12px);
+    }
+
+    .journal-mood__legend {
+      font-size: clamp(0.92rem, 2vw, 1.04rem);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: rgba(113, 92, 89, 0.85);
+    }
+
+    .journal-mood__scale {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+      gap: clamp(6px, 1.8vw, 10px);
+    }
+
+    .journal-mood__option {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: clamp(10px, 2.6vw, 14px);
+      border-radius: 14px;
+      border: 2px solid transparent;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 10px 18px rgba(255, 159, 197, 0.16);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      overflow: hidden;
+    }
+
+    .journal-mood__option:hover,
+    .journal-mood__option:focus-within {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 26px rgba(255, 159, 197, 0.24);
+      border-color: rgba(255, 159, 197, 0.5);
+      outline: none;
+    }
+
+    .journal-mood__option input {
+      position: absolute;
+      opacity: 0;
+      inset: 0;
+      cursor: pointer;
+    }
+
+    .journal-mood__icon {
+      position: relative;
+      z-index: 1;
+      font-size: clamp(1.2rem, 3vw, 1.6rem);
+    }
+
+    .journal-mood__label {
+      position: relative;
+      z-index: 1;
+      font-size: clamp(0.84rem, 1.9vw, 0.96rem);
+      font-weight: 600;
+      color: rgba(113, 92, 89, 0.82);
+      text-align: center;
+      line-height: 1.05;
+      /* Force single line and truncate with ellipsis if needed */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .journal-mood__highlight {
+      position: absolute;
+      inset: -2px;
+      border-radius: inherit;
+      border: 2px solid rgba(255, 159, 197, 0.6);
+      box-shadow: 0 0 0 4px rgba(255, 159, 197, 0.2);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .journal-mood__option input:checked ~ .journal-mood__highlight {
+      opacity: 1;
+    }
+
+    .journal-mood__option input:checked ~ .journal-mood__icon,
+    .journal-mood__option input:checked ~ .journal-mood__label {
+      color: var(--text-heading);
+    }
+
+    .journal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .journal-actions button {
+      border: none;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--rose-pop), #ffb2d3);
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 14px 26px;
+      font-size: clamp(0.88rem, 2.1vw, 1rem);
+      cursor: pointer;
+      box-shadow: 0 14px 28px rgba(255, 159, 197, 0.32);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .journal-actions button:hover,
+    .journal-actions button:focus-visible {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 34px rgba(255, 159, 197, 0.4);
+      outline: none;
+    }
+
+    .journal-feedback {
+      font-size: clamp(0.92rem, 2vw, 1.02rem);
+      color: var(--text-heading);
+      min-height: 1.4em;
+    }
+
+    .journal-feedback[aria-live="polite"] {
+      margin-top: 4px;
+    }
+
+    .journal-feedback--error {
+      color: #c25555;
+    }
+
+    .journal-advice {
+      margin-top: clamp(10px, 3vw, 14px);
+      background: rgba(255, 249, 252, 0.96);
+      border: 2px solid rgba(255, 159, 197, 0.36);
+      border-radius: 12px;
+      padding: clamp(12px, 3.2vw, 16px);
+      box-shadow: 0 12px 24px rgba(255, 159, 197, 0.18);
+      color: var(--text-main);
+      font-size: clamp(0.94rem, 2.2vw, 1.04rem);
+    }
+
+    .journal-advice__title {
+      margin: 0 0 6px 0;
+      font-weight: 700;
+      color: var(--text-heading);
+      letter-spacing: 0.02em;
+    }
+
+    .journal-advice__list {
+      margin: 0;
+      padding-left: 1.1em;
+    }
+
+    .journal-history {
+      max-height: 100%;
+    }
+
+    /* Mood graph styles */
+    .journal-graph {
+      margin-top: clamp(18px, 5vw, 28px);
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: var(--radius-md);
+      border: 2px solid rgba(255, 193, 214, 0.55);
+      box-shadow: 0 16px 36px rgba(255, 159, 197, 0.18);
+      padding: clamp(18px, 4.5vw, 26px);
+    }
+
+    .journal-graph h2 {
+      margin: 0 0 clamp(10px, 2.6vw, 16px);
+      font-size: clamp(1.3rem, 2.8vw, 1.7rem);
+      color: var(--text-heading);
+      font-family: 'Dancing Script', 'Quicksand', cursive;
+      text-align: center;
+    }
+
+    .journal-graph__toprow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: clamp(8px, 2.6vw, 12px);
+    }
+
+    .journal-graph__expand {
+      border: 2px solid rgba(255, 159, 197, 0.36);
+      background: rgba(255, 255, 255, 0.96);
+      color: var(--text-heading);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: clamp(0.72rem, 1.8vw, 0.84rem);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .journal-graph__expand:hover,
+    .journal-graph__expand:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(255, 159, 197, 0.2);
+      outline: none;
+    }
+
+    .journal-graph__controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: clamp(8px, 2.6vw, 12px);
+    }
+
+    .journal-graph__controls button {
+      border: 2px solid rgba(255, 159, 197, 0.36);
+      background: rgba(255, 255, 255, 0.96);
+      color: var(--text-heading);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: clamp(0.72rem, 1.8vw, 0.82rem);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .journal-graph__controls button:hover,
+    .journal-graph__controls button:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(255, 159, 197, 0.2);
+      outline: none;
+    }
+
+    .journal-graph__controls button.is-active {
+      background: linear-gradient(135deg, var(--rose-pop), #ffb2d3);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 12px 22px rgba(255, 159, 197, 0.26);
+    }
+
+    .journal-graph__wrap {
+      width: 100%;
+      height: clamp(220px, 40vw, 340px);
+      position: relative;
+    }
+
+    .journal-graph__svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .journal-graph__svg circle { cursor: pointer; }
+
+    /* Fullscreen graph overlay */
+    .graph-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(44, 20, 32, 0.5);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(14px, 4vw, 28px);
+      z-index: 1000;
+    }
+
+    .graph-overlay[hidden] { display: none; }
+
+    .graph-overlay__panel {
+      position: relative;
+      width: min(1300px, 98vw);
+      height: min(900px, 94vh);
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      border: 3px solid var(--rose-border);
+      box-shadow: 0 34px 72px rgba(255, 159, 197, 0.36);
+      padding: clamp(16px, 3.6vw, 22px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .graph-overlay__close {
+      position: absolute;
+      top: clamp(10px, 2.4vw, 16px);
+      right: clamp(10px, 2.4vw, 16px);
+      border: none;
+      background: rgba(255, 159, 197, 0.18);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      font-size: 1.3rem;
+      color: var(--text-heading);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 18px rgba(255, 159, 197, 0.24);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .graph-overlay__close:hover,
+    .graph-overlay__close:focus-visible {
+      transform: scale(1.06);
+      box-shadow: 0 14px 26px rgba(255, 159, 197, 0.3);
+      outline: none;
+    }
+
+    .graph-overlay__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .graph-overlay__title {
+      margin: 0;
+      font-family: 'Dancing Script', 'Quicksand', cursive;
+      color: var(--text-heading);
+      font-size: clamp(1.3rem, 3.2vw, 1.8rem);
+    }
+
+    .graph-overlay__wrap {
+      position: relative;
+      flex: 1;
+      border: 2px solid rgba(255, 193, 214, 0.55);
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: inset 0 0 0 1px rgba(255, 159, 197, 0.1);
+      overflow: hidden;
+    }
+
+    /* Mobile: overlay fills viewport; rotate inner wrap for landscape */
+    @media (max-width: 700px) {
+      .graph-overlay__panel {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        padding: 10px;
+      }
+      .graph-overlay--rotate .graph-overlay__wrap {
+        width: 100vh;
+        height: 100vw;
+        transform: rotate(90deg);
+        transform-origin: center;
+      }
+    }
+
+    .journal-graph__empty {
+      text-align: center;
+      color: rgba(113, 92, 89, 0.75);
+      font-size: clamp(0.92rem, 2.2vw, 1.02rem);
+    }
+
+    .journal-tooltip {
+      position: absolute;
+      max-width: min(240px, 80%);
+      background: rgba(255, 255, 255, 0.98);
+      border: 2px solid rgba(255, 159, 197, 0.4);
+      border-radius: 12px;
+      box-shadow: 0 14px 28px rgba(255, 159, 197, 0.22);
+      padding: 10px 12px;
+      color: var(--text-main);
+      font-size: clamp(0.86rem, 2vw, 0.98rem);
+      line-height: 1.5;
+      z-index: 2;
+      transform: translate(-50%, -110%);
+      pointer-events: none;
+    }
+
+    .journal-tooltip__title {
+      margin: 0 0 4px 0;
+      font-weight: 700;
+      color: var(--text-heading);
+    }
+
+    .journal-tooltip__meta {
+      margin: 0;
+      color: rgba(113, 92, 89, 0.8);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .journal-list {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(12px, 2.4vw, 18px);
+      max-height: clamp(320px, 60vw, 520px);
+      overflow-y: auto;
+      padding-right: clamp(6px, 1.4vw, 10px);
+    }
+
+    .journal-empty {
+      font-size: clamp(0.92rem, 2vw, 1.04rem);
+      color: rgba(113, 92, 89, 0.75);
+      line-height: 1.6;
+    }
+
+    .journal-day {
+      border-left: 3px solid rgba(255, 159, 197, 0.3);
+      padding-left: clamp(12px, 2.4vw, 18px);
+    }
+
+    .journal-day h3 {
+      margin: 0 0 clamp(8px, 1.8vw, 12px);
+      font-size: clamp(1.05rem, 2.4vw, 1.2rem);
+      font-family: 'Quicksand', 'Segoe UI', sans-serif;
+      color: var(--text-heading);
+      letter-spacing: 0.04em;
+    }
+
+    .journal-day__list {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 2vw, 12px);
+    }
+
+    .journal-entry {
+      background: rgba(255, 249, 252, 0.96);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 159, 197, 0.28);
+      padding: clamp(12px, 2.4vw, 16px);
+      box-shadow: 0 10px 20px rgba(255, 159, 197, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: clamp(8px, 2vw, 14px);
+      cursor: pointer;
+      text-align: left;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      font: inherit;
+      position: relative;
+      user-select: none;
+    }
+
+    .journal-entry:hover,
+    .journal-entry:focus-visible {
+      transform: translateY(-4px);
+      border-color: rgba(255, 159, 197, 0.5);
+      box-shadow: 0 16px 32px rgba(255, 159, 197, 0.26);
+      outline: none;
+    }
+
+    .journal-entry:focus-visible {
+      box-shadow: 0 0 0 4px rgba(255, 159, 197, 0.25), 0 18px 34px rgba(255, 159, 197, 0.26);
+    }
+
+    .journal-entry__meta {
+      flex: 1;
+      min-width: 0;
+      font-size: clamp(0.9rem, 2.2vw, 1.02rem);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(113, 92, 89, 0.75);
+    }
+
+    .journal-entry__controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .journal-entry__delete {
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 1.2rem;
+      color: #fff;
+      background: linear-gradient(135deg, #f0748a, #e94f73);
+      box-shadow: 0 10px 20px rgba(233, 79, 115, 0.24);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .journal-entry__delete:hover,
+    .journal-entry__delete:focus-visible {
+      transform: scale(1.05);
+      box-shadow: 0 14px 28px rgba(233, 79, 115, 0.32);
+      outline: none;
+    }
+
+    .journal-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(24px, 8vw, 48px);
+      background: rgba(44, 20, 32, 0.42);
+      backdrop-filter: blur(6px);
+      z-index: 40;
+      transition: opacity 0.3s ease;
+    }
+
+    .journal-overlay[aria-hidden="true"] {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .journal-overlay[aria-hidden="false"] {
+      opacity: 1;
+    }
+
+    .journal-overlay__panel {
+      position: relative;
+      width: min(640px, 100%);
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      border: 3px solid var(--rose-border);
+      box-shadow: 0 34px 72px rgba(255, 159, 197, 0.36);
+      padding: clamp(28px, 5.6vw, 40px);
+      font-family: 'Quicksand', 'Segoe UI', sans-serif;
+      color: var(--text-main);
+    }
+
+    .journal-overlay__close {
+      position: absolute;
+      top: clamp(12px, 2.6vw, 18px);
+      right: clamp(12px, 2.6vw, 18px);
+      border: none;
+      background: rgba(255, 159, 197, 0.18);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.4rem;
+      color: var(--text-heading);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 18px rgba(255, 159, 197, 0.24);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .journal-overlay__close:hover,
+    .journal-overlay__close:focus-visible {
+      transform: scale(1.08);
+      box-shadow: 0 14px 26px rgba(255, 159, 197, 0.3);
+      outline: none;
+    }
+
+    .journal-overlay__heading {
+      margin: 0 0 clamp(12px, 2.8vw, 18px);
+      font-family: 'Dancing Script', 'Quicksand', cursive;
+      font-size: clamp(1.6rem, 3.4vw, 2.1rem);
+      color: var(--text-heading);
+    }
+
+    .journal-overlay__date,
+    .journal-overlay__time,
+    .journal-overlay__mood,
+    .journal-overlay__mood-confirm {
+      margin: 0;
+      font-size: clamp(0.92rem, 2.1vw, 1.04rem);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(113, 92, 89, 0.7);
+    }
+
+    .journal-overlay__time {
+      margin-top: clamp(4px, 1.2vw, 8px);
+    }
+
+    .journal-overlay__mood,
+    .journal-overlay__mood-confirm {
+      display: none;
+      margin-top: clamp(4px, 1.2vw, 8px);
+    }
+
+    .journal-overlay__content {
+      margin-top: clamp(18px, 3.6vw, 26px);
+      font-size: clamp(1.05rem, 2.5vw, 1.2rem);
+      line-height: 1.75;
+      white-space: pre-wrap;
+    }
+
+    .journal-confirm__actions {
+      margin-top: clamp(20px, 4vw, 28px);
+      display: flex;
+      justify-content: flex-end;
+      gap: clamp(10px, 3vw, 16px);
+      flex-wrap: wrap;
+    }
+
+    .journal-confirm__cancel,
+    .journal-confirm__confirm {
+      border: none;
+      border-radius: 999px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: clamp(12px, 3vw, 16px) clamp(20px, 6vw, 28px);
+      font-size: clamp(0.88rem, 2.2vw, 1rem);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .journal-confirm__cancel {
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--text-heading);
+      border: 2px solid rgba(255, 159, 197, 0.36);
+      box-shadow: 0 10px 20px rgba(255, 159, 197, 0.16);
+    }
+
+    .journal-confirm__confirm {
+      background: linear-gradient(135deg, #f0748a, #e94f73);
+      color: #fff;
+      box-shadow: 0 16px 30px rgba(233, 79, 115, 0.28);
+    }
+
+    .journal-confirm__cancel:hover,
+    .journal-confirm__cancel:focus-visible,
+    .journal-confirm__confirm:hover,
+    .journal-confirm__confirm:focus-visible {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 34px rgba(255, 159, 197, 0.34);
+      outline: none;
+    }
+
+    body.journal-modal-open {
+      overflow: hidden;
+    }
+
+    body.journal-modal-open > .journal-wrapper {
+      filter: blur(6px);
+    }
+
+    @media (max-width: 900px) {
+      .journal-grid {
+        display: flex;
+        flex-direction: column;
+        gap: clamp(20px, 7vw, 28px);
+      }
+
+      .journal-compose {
+        order: 1;
+      }
+
+      .journal-history {
+        order: 2;
+      }
+
+      .journal-list {
+        max-height: clamp(280px, 60vw, 420px);
+      }
+
+      .journal-entry {
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+
+      .journal-entry__controls {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: clamp(24px, 9vw, 48px);
+      }
+
+      .journal-wrapper {
+        padding: clamp(24px, 9vw, 42px);
+      }
+
+      .journal-grid {
+        gap: clamp(18px, 6vw, 24px);
+      }
+
+      .journal-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .journal-entry {
+        padding: clamp(12px, 5vw, 20px);
+      }
+
+      .journal-confirm__actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="journal-wrapper">
+    <a class="journal-back" href="home.html">Back Home</a>
+    <div id="journal-streak" class="journal-streak" aria-live="polite" hidden>
+      <span class="journal-streak__icon" aria-hidden="true">🔥</span>
+      <span class="journal-streak__text" id="journal-streak-text">0-day streak</span>
+      <span class="journal-streak__best" id="journal-streak-best" hidden>(best: 0)</span>
+    </div>
+    <h1>Halle's Heart Journal</h1>
+    <p>Take a breath, check in with yourself, and let your words land in a safe place. Every entry stays on this device so you can look back whenever you need to.</p>
+    <div class="journal-grid">
+      <section class="journal-compose" aria-labelledby="journal-compose-heading">
+        <h2 id="journal-compose-heading">Write today's entry</h2>
+        <form class="journal-form" id="journal-form" novalidate>
+          <label for="journal-date">Which day is this entry for?</label>
+          <input type="date" id="journal-date" name="journal-date" required />
+
+          <div class="journal-mood" role="group" aria-labelledby="journal-mood-legend">
+            <span class="journal-mood__legend" id="journal-mood-legend">How is your heart feeling?</span>
+            <div class="journal-mood__scale">
+              <label class="journal-mood__option">
+                <input type="radio" name="journal-mood" value="1" aria-label="Mood level 1 - Unmotivated" />
+                <span class="journal-mood__icon" aria-hidden="true">🌧️</span>
+                <span class="journal-mood__label">Unmotivated</span>
+                <span class="journal-mood__highlight" aria-hidden="true"></span>
+              </label>
+              <label class="journal-mood__option">
+                <input type="radio" name="journal-mood" value="2" aria-label="Mood level 2 - Sad" />
+                <span class="journal-mood__icon" aria-hidden="true">😔</span>
+                <span class="journal-mood__label">Sad</span>
+                <span class="journal-mood__highlight" aria-hidden="true"></span>
+              </label>
+              <label class="journal-mood__option">
+                <input type="radio" name="journal-mood" value="3" aria-label="Mood level 3 - Peachy" />
+              <span class="journal-mood__icon" aria-hidden="true">🍑</span>
+                <span class="journal-mood__label">Peachy</span>
+                <span class="journal-mood__highlight" aria-hidden="true"></span>
+              </label>
+              <label class="journal-mood__option">
+                <input type="radio" name="journal-mood" value="4" aria-label="Mood level 4 - Happy" checked />
+                <span class="journal-mood__icon" aria-hidden="true">😊</span>
+                <span class="journal-mood__label">Happy</span>
+                <span class="journal-mood__highlight" aria-hidden="true"></span>
+              </label>
+              <label class="journal-mood__option">
+                <input type="radio" name="journal-mood" value="5" aria-label="Mood level 5 - Motivated" />
+                <span class="journal-mood__icon" aria-hidden="true">⚡</span>
+                <span class="journal-mood__label">Motivated</span>
+                <span class="journal-mood__highlight" aria-hidden="true"></span>
+              </label>
+              <label class="journal-mood__option">
+                <input type="radio" name="journal-mood" value="6" aria-label="Mood level 6 - Ecstatic" />
+                <span class="journal-mood__icon" aria-hidden="true">✨</span>
+                <span class="journal-mood__label">Ecstatic</span>
+                <span class="journal-mood__highlight" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <label for="journal-content">How are you feeling right now?</label>
+          <textarea id="journal-content" name="journal-content" placeholder="Let it all out: the good, the heavy, the small wins, the messy bits." required></textarea>
+
+          <div class="journal-actions">
+            <button type="submit">Save entry</button>
+            <span class="journal-feedback" id="journal-feedback" aria-live="polite"></span>
+          </div>
+          <div id="journal-advice" class="journal-advice" aria-live="polite" hidden></div>
+        </form>
+      </section>
+
+      <aside class="journal-history" aria-labelledby="journal-history-heading">
+        <h2 id="journal-history-heading" tabindex="-1">Entries saved here</h2>
+        <div class="journal-list" id="journal-list"></div>
+      </aside>
+    </div>
+
+    <section class="journal-graph" aria-labelledby="journal-graph-title">
+      <div class="journal-graph__toprow">
+        <h2 id="journal-graph-title">Mood over time</h2>
+        <button type="button" id="journal-graph-expand" class="journal-graph__expand">Expand graph</button>
+      </div>
+      <!-- Range controls moved to overlay; inline graph remains hidden until expanded -->
+      <div class="journal-graph__wrap" id="journal-graph-wrap" hidden>
+        <svg id="mood-chart" class="journal-graph__svg" viewBox="0 0 800 320" role="img" aria-label="Mood over time" preserveAspectRatio="none"></svg>
+        <div id="mood-chart-empty" class="journal-graph__empty" hidden>Not enough data yet. Your moods will appear here after a couple entries.</div>
+        <div id="journal-tooltip" class="journal-tooltip" hidden>
+          <div class="journal-tooltip__title" id="journal-tooltip-title"></div>
+          <div class="journal-tooltip__meta" id="journal-tooltip-meta"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div id="graph-overlay" class="graph-overlay" hidden>
+    <div class="graph-overlay__panel">
+      <button type="button" id="graph-overlay-close" class="graph-overlay__close" aria-label="Close graph">&times;</button>
+      <div class="graph-overlay__header">
+        <h3 class="graph-overlay__title">Mood over time</h3>
+      </div>
+      <div class="graph-overlay__wrap" id="graph-overlay-wrap">
+          <svg id="mood-chart-full" class="journal-graph__svg" viewBox="0 0 1400 820" role="img" aria-label="Mood over time (expanded)" preserveAspectRatio="none"></svg>
+        <div id="mood-chart-full-empty" class="journal-graph__empty" hidden>Not enough data yet.</div>
+        <div id="journal-tooltip-full" class="journal-tooltip" hidden>
+          <div class="journal-tooltip__title" id="journal-tooltip-full-title"></div>
+          <div class="journal-tooltip__meta" id="journal-tooltip-full-meta"></div>
+        </div>
+      </div>
+      <div class="journal-graph__controls" id="journal-graph-controls" role="tablist" aria-label="Time range">
+        <button type="button" data-range="7d" role="tab" aria-selected="false">7 days</button>
+        <button type="button" data-range="30d" role="tab" aria-selected="true" class="is-active">30 days</button>
+        <button type="button" data-range="all" role="tab" aria-selected="false">All time</button>
+      </div>
+      <div class="journal-graph__empty" id="graph-mobile-hint" hidden>Rotated for a better view</div>
+    </div>
+  </div>
+  <div class="journal-overlay" id="journal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="journal-overlay-title">
+    <div class="journal-overlay__panel" role="document">
+      <button class="journal-overlay__close" type="button" id="journal-overlay-close" aria-label="Close entry">&times;</button>
+      <h2 class="journal-overlay__heading" id="journal-overlay-title">Saved entry</h2>
+      <p class="journal-overlay__date" id="journal-overlay-date"></p>
+      <p class="journal-overlay__time" id="journal-overlay-time"></p>
+      <p class="journal-overlay__mood" id="journal-overlay-mood"></p>
+      <div class="journal-overlay__content" id="journal-overlay-content"></div>
+    </div>
+  </div>
+  <div class="journal-overlay" id="journal-confirm" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="journal-confirm-title">
+    <div class="journal-overlay__panel" role="document">
+      <button class="journal-overlay__close" type="button" id="journal-confirm-close" aria-label="Close delete prompt">&times;</button>
+      <h2 class="journal-overlay__heading" id="journal-confirm-title">Delete entry?</h2>
+      <p class="journal-overlay__date" id="journal-confirm-date"></p>
+      <p class="journal-overlay__time" id="journal-confirm-time"></p>
+      <p class="journal-overlay__mood-confirm" id="journal-confirm-mood"></p>
+      <div class="journal-overlay__content" id="journal-confirm-content"></div>
+      <div class="journal-confirm__actions">
+        <button type="button" class="journal-confirm__cancel" id="journal-confirm-cancel">Cancel</button>
+        <button type="button" class="journal-confirm__confirm" id="journal-confirm-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const STORAGE_KEY = 'halleJournalEntries';
+      const form = document.getElementById('journal-form');
+      const dateInput = document.getElementById('journal-date');
+      const contentInput = document.getElementById('journal-content');
+      const feedback = document.getElementById('journal-feedback');
+  const adviceBox = document.getElementById('journal-advice');
+      const list = document.getElementById('journal-list');
+  const streakBox = document.getElementById('journal-streak');
+  const streakText = document.getElementById('journal-streak-text');
+  const streakBest = document.getElementById('journal-streak-best');
+  const moodChartSvg = document.getElementById('mood-chart');
+  const moodChartEmpty = document.getElementById('mood-chart-empty');
+  const graphControls = document.getElementById('journal-graph-controls');
+  const graphExpandBtn = document.getElementById('journal-graph-expand');
+  const graphOverlay = document.getElementById('graph-overlay');
+  const graphOverlayClose = document.getElementById('graph-overlay-close');
+  const overlayWrap = document.getElementById('graph-overlay-wrap');
+  const moodChartFull = document.getElementById('mood-chart-full');
+  const moodChartFullEmpty = document.getElementById('mood-chart-full-empty');
+  const tipFull = document.getElementById('journal-tooltip-full');
+  const tipFullTitle = document.getElementById('journal-tooltip-full-title');
+  const tipFullMeta = document.getElementById('journal-tooltip-full-meta');
+  const graphMobileHint = document.getElementById('graph-mobile-hint');
+  const graphWrap = document.getElementById('journal-graph-wrap');
+  const tip = document.getElementById('journal-tooltip');
+  const tipTitle = document.getElementById('journal-tooltip-title');
+  const tipMeta = document.getElementById('journal-tooltip-meta');
+  let graphRange = '30d';
+  const overlay = document.getElementById('journal-overlay');
+  const overlayDate = document.getElementById('journal-overlay-date');
+  const overlayTime = document.getElementById('journal-overlay-time');
+  const overlayMood = document.getElementById('journal-overlay-mood');
+  const overlayContent = document.getElementById('journal-overlay-content');
+  const overlayClose = document.getElementById('journal-overlay-close');
+  const confirmOverlay = document.getElementById('journal-confirm');
+  const confirmDate = document.getElementById('journal-confirm-date');
+  const confirmTime = document.getElementById('journal-confirm-time');
+  const confirmMood = document.getElementById('journal-confirm-mood');
+  const confirmContent = document.getElementById('journal-confirm-content');
+  const confirmClose = document.getElementById('journal-confirm-close');
+  const confirmCancel = document.getElementById('journal-confirm-cancel');
+  const confirmConfirm = document.getElementById('journal-confirm-confirm');
+  const historyHeading = document.getElementById('journal-history-heading');
+  const moodInputs = Array.from(document.querySelectorAll('input[name="journal-mood"]'));
+      let overlayOpen = false;
+      let lastFocusedElement = null;
+      let activeEntryId = null;
+      let confirmOpen = false;
+      let confirmLastFocusedElement = null;
+      let pendingDeleteEntry = null;
+
+      let entries = loadEntries();
+      setDefaultDate();
+      renderEntries();
+  updateStreak();
+  // Do not render inline chart until user expands; keep controls and graph hidden
+  setupGraphControls();
+  setupGraphOverlay();
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const dateValue = dateInput.value || todayISO();
+        const contentValue = contentInput.value.trim();
+        const moodValue = getSelectedMood();
+
+        if (!contentValue) {
+          setFeedback('Please write a few words before saving.', true);
+          return;
+        }
+
+        const entry = {
+          id: Date.now().toString(36),
+          date: dateValue,
+          content: contentValue,
+          createdAt: new Date().toISOString(),
+          mood: moodValue
+        };
+
+        entries.push(entry);
+        saveEntries(entries);
+        renderEntries();
+        updateStreak();
+  renderMoodChart();
+        contentInput.value = '';
+        setMoodSelection(moodValue);
+        setFeedback('Saved! Proud of you for checking in.', false);
+        showAdviceForMood(moodValue);
+      });
+
+      overlayClose.addEventListener('click', closeOverlay);
+      overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) {
+          closeOverlay();
+        }
+      });
+
+      confirmClose.addEventListener('click', closeConfirmOverlay);
+      confirmCancel.addEventListener('click', closeConfirmOverlay);
+      confirmConfirm.addEventListener('click', function () {
+        if (!pendingDeleteEntry) {
+          closeConfirmOverlay();
+          return;
+        }
+        deleteEntry(pendingDeleteEntry.id);
+        closeConfirmOverlay();
+      });
+
+      confirmOverlay.addEventListener('click', function (event) {
+        if (event.target === confirmOverlay) {
+          closeConfirmOverlay();
+        }
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          if (confirmOpen) {
+            event.preventDefault();
+            closeConfirmOverlay();
+            return;
+          }
+          if (overlayOpen) {
+            event.preventDefault();
+            closeOverlay();
+          }
+        }
+      });
+
+      function setDefaultDate() {
+        if (!dateInput.value) {
+          dateInput.value = todayISO();
+        }
+        setMoodSelection('4');
+      }
+
+      function todayISO() {
+        return new Date().toISOString().slice(0, 10);
+      }
+
+      function loadEntries() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          console.warn('Unable to read journal entries:', error);
+          return [];
+        }
+      }
+
+      function saveEntries(data) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (error) {
+          setFeedback('Could not save. Please free up some space and try again.', true);
+        }
+      }
+
+      function renderEntries() {
+        list.innerHTML = '';
+
+        if (!entries.length) {
+          const emptyState = document.createElement('p');
+          emptyState.className = 'journal-empty';
+          emptyState.textContent = 'No entries yet. When you are ready, your words can live here.';
+          list.appendChild(emptyState);
+          return;
+        }
+          // Group journal entries by their calendar date.
+          const grouped = entries.reduce(function (acc, entry) {
+            if (!acc[entry.date]) {
+              acc[entry.date] = [];
+            }
+            acc[entry.date].push(entry);
+            return acc;
+          }, {});
+
+        const sortedDates = Object.keys(grouped).sort(function (a, b) {
+          return new Date(b) - new Date(a);
+        });
+
+        sortedDates.forEach(function (dateKey) {
+          const entryNumbers = assignEntryNumbers(grouped[dateKey]);
+          const daySection = document.createElement('section');
+          daySection.className = 'journal-day';
+
+          const heading = document.createElement('h3');
+          heading.textContent = formatDate(dateKey);
+          daySection.appendChild(heading);
+
+          const dayList = document.createElement('div');
+          dayList.className = 'journal-day__list';
+
+          grouped[dateKey]
+            .slice()
+            .sort(function (a, b) {
+              return new Date(b.createdAt) - new Date(a.createdAt);
+            })
+            .forEach(function (entry) {
+              const item = document.createElement('div');
+              const entryNumber = entryNumbers.get(entry.id) || 1;
+              const timeLabel = formatTime(entry.createdAt);
+
+              item.className = 'journal-entry';
+              item.setAttribute('role', 'button');
+              item.setAttribute('tabindex', '0');
+              item.setAttribute('data-entry-id', entry.id);
+              item.setAttribute('aria-haspopup', 'dialog');
+              item.setAttribute('aria-controls', 'journal-overlay');
+              var ariaLabel = 'Open journal entry ' + entryNumber + ' from ' + formatDate(entry.date);
+              if (timeLabel) {
+                ariaLabel += ' at ' + timeLabel;
+              }
+              item.setAttribute('aria-label', ariaLabel);
+
+              const meta = document.createElement('span');
+              meta.className = 'journal-entry__meta';
+              var metaParts = ['Entry ' + entryNumber];
+              if (timeLabel) {
+                metaParts.push(timeLabel);
+              } else {
+                metaParts.push('Saved moment');
+              }
+              meta.textContent = metaParts.join(' - ');
+
+              const controls = document.createElement('span');
+              controls.className = 'journal-entry__controls';
+
+              const deleteBtn = document.createElement('button');
+              deleteBtn.type = 'button';
+              deleteBtn.className = 'journal-entry__delete';
+              deleteBtn.setAttribute(
+                'aria-label',
+                'Delete entry ' + entryNumber + ' from ' + formatDate(entry.date)
+              );
+              deleteBtn.textContent = 'X';
+
+              deleteBtn.addEventListener('click', function (event) {
+                event.stopPropagation();
+                promptDelete(entry);
+              });
+
+              controls.appendChild(deleteBtn);
+
+              item.appendChild(meta);
+              item.appendChild(controls);
+
+              item.addEventListener('click', function () {
+                openOverlay(entry);
+              });
+
+              item.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+                  event.preventDefault();
+                  openOverlay(entry);
+                }
+              });
+
+              dayList.appendChild(item);
+            });
+
+          daySection.appendChild(dayList);
+          list.appendChild(daySection);
+        });
+      }
+
+      function openOverlay(entry) {
+        lastFocusedElement = document.activeElement;
+        overlayDate.textContent = formatDate(entry.date);
+        const timeLabel = formatTime(entry.createdAt) || '';
+        overlayTime.textContent = timeLabel;
+        overlayTime.style.display = timeLabel ? '' : 'none';
+        const moodDetails = getMoodDetails(entry.mood);
+        if (moodDetails) {
+          overlayMood.textContent = 'Mood: ' + moodDetails.emoji + ' ' + moodDetails.label;
+          overlayMood.style.display = '';
+        } else {
+          overlayMood.textContent = '';
+          overlayMood.style.display = 'none';
+        }
+        overlayContent.textContent = entry.content;
+        overlay.setAttribute('aria-hidden', 'false');
+        overlayOpen = true;
+        activeEntryId = entry.id;
+        updateBodyModalState();
+        overlayClose.focus();
+      }
+
+      function closeOverlay() {
+        overlay.setAttribute('aria-hidden', 'true');
+        overlayOpen = false;
+        activeEntryId = null;
+        updateBodyModalState();
+        overlayMood.textContent = '';
+  overlayMood.style.display = 'none';
+        if (lastFocusedElement && document.contains(lastFocusedElement)) {
+          lastFocusedElement.focus();
+        } else if (historyHeading) {
+          historyHeading.focus();
+        }
+        lastFocusedElement = null;
+      }
+
+      function promptDelete(entry) {
+        confirmLastFocusedElement = document.activeElement;
+        pendingDeleteEntry = entry;
+        confirmDate.textContent = formatDate(entry.date);
+        const timeLabel = formatTime(entry.createdAt) || '';
+        confirmTime.textContent = timeLabel;
+        confirmTime.style.display = timeLabel ? '' : 'none';
+        const moodDetails = getMoodDetails(entry.mood);
+        if (moodDetails) {
+          confirmMood.textContent = 'Mood: ' + moodDetails.emoji + ' ' + moodDetails.label;
+          confirmMood.style.display = '';
+        } else {
+          confirmMood.textContent = '';
+          confirmMood.style.display = 'none';
+        }
+        confirmContent.textContent = entry.content || '(No text recorded)';
+        confirmOverlay.setAttribute('aria-hidden', 'false');
+        confirmOpen = true;
+        updateBodyModalState();
+        confirmConfirm.focus();
+      }
+
+      function closeConfirmOverlay() {
+        confirmOverlay.setAttribute('aria-hidden', 'true');
+        confirmOpen = false;
+        pendingDeleteEntry = null;
+        updateBodyModalState();
+        confirmMood.textContent = '';
+  confirmMood.style.display = 'none';
+        if (confirmLastFocusedElement && document.contains(confirmLastFocusedElement)) {
+          confirmLastFocusedElement.focus();
+        } else if (historyHeading) {
+          historyHeading.focus();
+        }
+        confirmLastFocusedElement = null;
+      }
+
+      function formatDate(value) {
+        const date = new Date(value + 'T12:00:00');
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+        return date.toLocaleDateString(undefined, {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+
+      function formatTime(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return '';
+        }
+        return date.toLocaleTimeString(undefined, {
+          hour: 'numeric',
+          minute: '2-digit'
+        });
+      }
+
+      function assignEntryNumbers(entriesForDay) {
+        // Provide consistent numbering for entries within a single day.
+        const indexMap = new Map();
+        entriesForDay
+          .slice()
+          .sort(function (a, b) {
+            return new Date(a.createdAt) - new Date(b.createdAt);
+          })
+          .forEach(function (entry, idx) {
+            indexMap.set(entry.id, idx + 1);
+          });
+        return indexMap;
+      }
+
+      function setFeedback(message, isError) {
+        feedback.textContent = message;
+        feedback.classList.toggle('journal-feedback--error', Boolean(isError));
+      }
+
+      function showAdviceForMood(mood) {
+        var details = getMoodDetails(mood);
+        if (!details) {
+          adviceBox.hidden = true;
+          adviceBox.textContent = '';
+          return;
+        }
+
+        var suggestions = getMoodSuggestions(details.value);
+        var title = 'Ideas for now';
+
+        var html = '<div class="journal-advice__title">' + details.emoji + ' ' + details.label + ' — ' + title + '</div>';
+        html += '<ul class="journal-advice__list">';
+        suggestions.forEach(function (s) {
+          html += '<li>' + s + '</li>';
+        });
+        html += '</ul>';
+
+        adviceBox.innerHTML = html;
+        adviceBox.hidden = false;
+      }
+
+      function getMoodSuggestions(value) {
+        var map = {
+          '1': [
+            'Play your favorite calming song and breathe slowly for one minute',
+            'Step outside for 2–5 minutes of fresh air',
+            'Sip some water, stretch your shoulders and neck',
+            'Pick one tiny task and do just the first step'
+          ],
+          '2': [
+            'Text someone you trust a quick hello',
+            'Write three things you’re grateful for',
+            'Watch a short, comforting clip or look at a favorite photo',
+            'Give yourself permission to rest for 10 minutes'
+          ],
+          '3': [
+            'Do a light 5-minute tidy or desk reset',
+            'Make a fun snack or a cup of tea',
+            'Take a short walk and notice five nice things',
+            'Queue up a feel-good playlist'
+          ],
+          '4': [
+            'Tackle a small goal you’ve been eyeing',
+            'Share a kind message with someone',
+            'Journal one win from today',
+            'Plan a little treat for later'
+          ],
+          '5': [
+            'Start a 15–20 minute focus sprint',
+            'Try a quick workout or dance break',
+            'Make progress on something a bit challenging',
+            'Organize tomorrow’s top 3 tasks'
+          ],
+          '6': [
+            'Channel the energy into a creative burst',
+            'Do something generous for future-you',
+            'Reach out and spread the good vibes',
+            'Capture the moment with a photo or note'
+          ]
+        };
+        return map[value] || [];
+      }
+
+      function deleteEntry(entryId) {
+        entries = entries.filter(function (entry) {
+          return entry.id !== entryId;
+        });
+
+        saveEntries(entries);
+        renderEntries();
+        updateStreak();
+  renderMoodChart();
+
+        if (overlayOpen && activeEntryId === entryId) {
+          closeOverlay();
+        }
+
+        setFeedback('Entry deleted.', false);
+      }
+
+      function updateStreak() {
+        var uniqueDates = Array.from(new Set((entries || []).map(function (e) { return e.date; })));
+        if (uniqueDates.length === 0) {
+          streakBox.hidden = false;
+          streakText.textContent = '0-day streak — start today';
+          streakBest.hidden = true;
+          return;
+        }
+
+        // Normalize to Date objects at local midnight for consistency
+        var dateSet = new Set(uniqueDates);
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+
+        var hasToday = dateSet.has(today.toISOString().slice(0, 10));
+        var hasYesterday = dateSet.has(yesterday.toISOString().slice(0, 10));
+
+        // Build streak by walking back from today if today has entry, else from yesterday if that has entry; otherwise streak is 0.
+        var start = hasToday ? new Date(today) : (hasYesterday ? new Date(yesterday) : null);
+        var streak = 0;
+        if (start) {
+          var cursor = new Date(start);
+          while (dateSet.has(cursor.toISOString().slice(0, 10))) {
+            streak += 1;
+            cursor.setDate(cursor.getDate() - 1);
+          }
+        }
+
+        // Load and update best streak
+        var BEST_KEY = 'halleJournalBestStreak';
+        var best = 0;
+        try {
+          var raw = localStorage.getItem(BEST_KEY);
+          best = raw ? parseInt(raw, 10) : 0;
+        } catch (e) { best = 0; }
+        if (streak > best) {
+          best = streak;
+          try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {}
+        }
+
+        // UI
+        streakBox.hidden = false;
+        var suffix = streak === 1 ? 'day' : 'days';
+        var progressHint = '';
+        if (!hasToday && hasYesterday && streak > 0) {
+          progressHint = ' — add one today to keep it going';
+        }
+        streakText.textContent = streak + '-' + suffix + ' streak' + progressHint;
+
+        if (best > 0) {
+          streakBest.hidden = false;
+          streakBest.textContent = '(best: ' + best + ')';
+        } else {
+          streakBest.hidden = true;
+        }
+      }
+
+      function updateBodyModalState() {
+        if (overlayOpen || confirmOpen) {
+          document.body.classList.add('journal-modal-open');
+        } else {
+          document.body.classList.remove('journal-modal-open');
+        }
+      }
+
+      function renderMoodChart(target) {
+        if (!moodChartSvg) return;
+        // Select where to render (inline vs expanded)
+        var svgEl = target === 'full' ? moodChartFull : moodChartSvg;
+        var emptyEl = target === 'full' ? moodChartFullEmpty : moodChartEmpty;
+        var tipEl = target === 'full' ? tipFull : tip;
+        var wrapEl = target === 'full' ? overlayWrap : graphWrap;
+        if (!svgEl) return;
+        // Guard: ensure corresponding empties and tooltips exist
+        if (target === 'full') {
+          if (!moodChartFullEmpty) return;
+        } else {
+          if (!moodChartEmpty) return;
+        }
+
+        // Gather points: sort all entries by createdAt ascending; filter by time range
+        var all = (entries || [])
+          .filter(function (e) { return e && e.mood; })
+          .slice()
+          .sort(function (a, b) { return new Date(a.createdAt) - new Date(b.createdAt); });
+
+        var now = new Date();
+        var from = null;
+        if (graphRange === '7d') {
+          from = new Date(now);
+          from.setDate(from.getDate() - 7);
+        } else if (graphRange === '30d') {
+          from = new Date(now);
+          from.setDate(from.getDate() - 30);
+        }
+        var data = all.filter(function (e) {
+          if (!from) return true;
+          return new Date(e.createdAt) >= from;
+        }).map(function (e) {
+          return {
+            id: e.id,
+            date: e.date,
+            t: new Date(e.createdAt),
+            v: parseInt(e.mood, 10)
+          };
+        });
+
+        // Need at least 2 points to draw a line
+        if (data.length < 2) {
+          svgEl.innerHTML = '';
+          if (emptyEl) emptyEl.hidden = false;
+          return;
+        }
+        if (emptyEl) emptyEl.hidden = true;
+
+        // Set chart dimensions (match viewBox 800x320)
+  var W = target === 'full' ? 1400 : 800;
+  var H = target === 'full' ? 820 : 320;
+  var PAD_L = 88, PAD_R = (target === 'full' ? 60 : 16), PAD_T = 16, PAD_B = 52; // more space for labels and right tooltip
+        var x0 = PAD_L, x1 = W - PAD_R;
+        var y0 = H - PAD_B, y1 = PAD_T;
+
+        // X scale: time
+        var minT = data[0].t.getTime();
+        var maxT = data[data.length - 1].t.getTime();
+        if (minT === maxT) {
+          // Avoid divide-by-zero; spread artificially by 1 hour
+          maxT = minT + 3600 * 1000;
+        }
+        function xScale(t) {
+          return x0 + (x1 - x0) * ((t - minT) / (maxT - minT));
+        }
+
+        // Y scale: mood values in [1..6] with top higher values
+        var minV = 1, maxV = 6;
+        function yScale(v) {
+          var p = (v - minV) / (maxV - minV);
+          return y0 - (y0 - y1) * p;
+        }
+
+        // Build path
+        var d = '';
+        for (var i = 0; i < data.length; i++) {
+          var px = xScale(data[i].t.getTime());
+          var py = yScale(data[i].v);
+          d += (i === 0 ? 'M' : 'L') + px.toFixed(1) + ' ' + py.toFixed(1) + ' ';
+        }
+
+        // Area under curve for a soft feel
+        var dArea = d + 'L ' + xScale(maxT).toFixed(1) + ' ' + y0 + ' L ' + xScale(minT).toFixed(1) + ' ' + y0 + ' Z';
+
+  // Axes and labels
+        var axisColor = 'rgba(113, 92, 89, 0.35)';
+        var textColor = 'rgba(113, 92, 89, 0.75)';
+  var compact = (typeof window !== 'undefined') ? (window.innerWidth <= 430) : false;
+
+        var grid = '';
+        for (var mv = minV; mv <= maxV; mv++) {
+          var gy = yScale(mv);
+          var md = getMoodDetails(String(mv));
+          var yLabel = md ? (compact ? md.emoji : (md.emoji + ' ' + md.label)) : String(mv);
+          grid += '<line x1="' + x0 + '" y1="' + gy.toFixed(1) + '" x2="' + x1 + '" y2="' + gy.toFixed(1) + '" stroke="' + axisColor + '" stroke-width="1" />';
+          grid += '<text x="' + (x0 - 12) + '" y="' + (gy + 4).toFixed(1) + '" text-anchor="end" font-size="12" fill="' + textColor + '">' + yLabel.replace(/</g, '&lt;') + '</text>';
+        }
+
+        // X ticks: date labels (at most 6 ticks for readability)
+        var xTicks = '';
+        var tickCount = Math.min(6, Math.max(2, Math.floor((x1 - x0) / 100)));
+        for (var ti = 0; ti < tickCount; ti++) {
+          var tt = minT + ((maxT - minT) * ti) / (tickCount - 1);
+          var tx = xScale(tt);
+          var dStr = new Date(tt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          xTicks += '<text x="' + tx.toFixed(1) + '" y="' + (y0 + 20) + '" text-anchor="middle" font-size="11" fill="' + textColor + '">' + dStr + '</text>';
+        }
+
+        // Points with mood emoji tooltips via title
+        var points = '';
+        for (var j = 0; j < data.length; j++) {
+          var cx = xScale(data[j].t.getTime());
+          var cy = yScale(data[j].v);
+          var mdp = getMoodDetails(String(data[j].v));
+          var dateLabel = data[j].t.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          var label = (mdp ? (mdp.emoji + ' ' + mdp.label) : ('Mood ' + data[j].v)) + ' — ' + dateLabel;
+          points += '<circle data-entry-id="' + data[j].id + '" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="4" fill="#ff8db4" stroke="#fff" stroke-width="1.5">\n<title>' + label.replace(/</g, '&lt;') + '</title>\n</circle>';
+        }
+
+        // Compose SVG
+        var svgHtml = '' +
+          '<defs>' +
+          '  <linearGradient id="moodLine" x1="0" y1="0" x2="0" y2="1">' +
+          '    <stop offset="0%" stop-color="#ff99c2" />' +
+          '    <stop offset="100%" stop-color="#ff6fa3" />' +
+          '  </linearGradient>' +
+          '  <linearGradient id="moodArea" x1="0" y1="0" x2="0" y2="1">' +
+          '    <stop offset="0%" stop-color="rgba(255, 159, 197, 0.28)" />' +
+          '    <stop offset="100%" stop-color="rgba(255, 159, 197, 0.06)" />' +
+          '  </linearGradient>' +
+          '</defs>' +
+          '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="transparent" />' +
+          grid + xTicks +
+          '<path d="' + dArea + '" fill="url(#moodArea)" stroke="none" />' +
+          '<path d="' + d + '" fill="none" stroke="url(#moodLine)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />' +
+          points;
+
+  svgEl.innerHTML = svgHtml;
+
+        // Make points interactive: click to open entry modal, and show tooltip on hover
+  var nodes = svgEl.querySelectorAll('circle[data-entry-id]');
+        nodes.forEach(function (node) {
+          node.addEventListener('click', function (evt) {
+            var id = node.getAttribute('data-entry-id');
+            var entry = (entries || []).find(function (e) { return e.id === id; });
+            if (entry) {
+              openOverlay(entry);
+            }
+          });
+
+          node.addEventListener('mouseenter', function (evt) {
+            var id = node.getAttribute('data-entry-id');
+            var entry = (entries || []).find(function (e) { return e.id === id; });
+            if (!entry) return;
+            showTooltipForEntry(evt, entry, tipEl, wrapEl);
+          });
+          node.addEventListener('mousemove', function (evt) {
+            if (!tip || tip.hidden) return;
+            positionTooltip(evt, tipEl, wrapEl);
+          });
+          node.addEventListener('mouseleave', function () {
+            hideTooltip(tipEl);
+          });
+
+          // Pointer events (better cross-device)
+          node.addEventListener('pointerenter', function (evt) {
+            var id = node.getAttribute('data-entry-id');
+            var entry = (entries || []).find(function (e) { return e.id === id; });
+            if (!entry) return;
+            showTooltipForEntry(evt, entry, tipEl, wrapEl);
+          });
+          node.addEventListener('pointermove', function (evt) {
+            if (!tip || tip.hidden) return;
+            positionTooltip(evt, tipEl, wrapEl);
+          });
+          node.addEventListener('pointerleave', function () {
+            hideTooltip(tipEl);
+          });
+
+          // Touch events (mobile)
+          node.addEventListener('touchstart', function (evt) {
+            var id = node.getAttribute('data-entry-id');
+            var entry = (entries || []).find(function (e) { return e.id === id; });
+            if (!entry) return;
+            showTooltipForEntry(evt, entry, tipEl, wrapEl);
+          }, { passive: true });
+          node.addEventListener('touchmove', function (evt) {
+            if (!tip || tip.hidden) return;
+            positionTooltip(evt, tipEl, wrapEl);
+          }, { passive: true });
+          node.addEventListener('touchend', function () { hideTooltip(tipEl); }, { passive: true });
+          node.addEventListener('touchcancel', function () { hideTooltip(tipEl); }, { passive: true });
+        });
+      }
+
+      // Re-render chart on window resize to adapt labels for small screens
+      (function(){
+        var t = null;
+        window.addEventListener('resize', function(){
+          if (t) clearTimeout(t);
+          t = setTimeout(function(){ renderMoodChart(); }, 150);
+        });
+      })();
+
+      function setupGraphControls() {
+        if (!graphControls) return;
+        graphControls.addEventListener('click', function (e) {
+          var btn = e.target.closest('button[data-range]');
+          if (!btn) return;
+          graphRange = btn.getAttribute('data-range');
+          Array.from(graphControls.querySelectorAll('button')).forEach(function (b) {
+            b.classList.toggle('is-active', b === btn);
+            b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+          });
+          renderMoodChart();
+        });
+      }
+
+      function showTooltipForEntry(evt, entry, tooltipEl, wrapEl) {
+        var tipRef = tooltipEl || tip; var wrapRef = wrapEl || graphWrap;
+        if (!tipRef || !wrapRef) return;
+        var md = getMoodDetails(entry.mood);
+        var dateLabel = new Date(entry.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        var timeLabel = (function(){
+          var t = new Date(entry.createdAt);
+          return t.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        })();
+        var moodText = md ? (md.emoji + ' ' + md.label) : ('Mood ' + entry.mood);
+        var titleNode = tooltipEl === tipFull ? tipFullTitle : tipTitle;
+        var metaNode = tooltipEl === tipFull ? tipFullMeta : tipMeta;
+        titleNode.textContent = moodText + ' — ' + dateLabel;
+        // Same meta format used in list: Entry N - [time]
+        var entryNumbers = assignEntryNumbers((entries || []).filter(function (e) { return e.date === entry.date; }));
+        var n = entryNumbers.get(entry.id) || 1;
+        var meta = ['Entry ' + n];
+        if (timeLabel) meta.push(timeLabel);
+        metaNode.textContent = meta.join(' - ');
+        tipRef.hidden = false;
+        positionTooltip(evt, tipRef, wrapRef);
+      }
+
+      function hideTooltip(tooltipEl) {
+        var t = tooltipEl || tip; if (!t) return; t.hidden = true;
+      }
+
+      function positionTooltip(evt, tooltipEl, wrapEl) {
+        var tipRef = tooltipEl || tip; var wrapRef = wrapEl || graphWrap;
+        if (!tipRef || !wrapRef) return;
+        var rect = wrapRef.getBoundingClientRect();
+        var clientX = evt && evt.touches && evt.touches[0] ? evt.touches[0].clientX : evt.clientX;
+        var clientY = evt && evt.touches && evt.touches[0] ? evt.touches[0].clientY : evt.clientY;
+        var x = clientX - rect.left;
+        var y = clientY - rect.top;
+        // Keep tooltip within container bounds
+        var pad = 10;
+        var maxX = rect.width - pad;
+        var maxY = rect.height - pad;
+        tipRef.style.left = Math.max(pad, Math.min(maxX, x)) + 'px';
+        tipRef.style.top = Math.max(pad, Math.min(maxY, y)) + 'px';
+      }
+
+      function setupGraphOverlay() {
+        if (!graphExpandBtn || !graphOverlay) return;
+        graphExpandBtn.addEventListener('click', function () {
+          var shouldRotate = window.matchMedia('(max-width: 700px)').matches; // mobile only
+          graphOverlay.hidden = false;
+          document.body.classList.add('journal-modal-open');
+          if (shouldRotate) graphOverlay.classList.add('graph-overlay--rotate'); else graphOverlay.classList.remove('graph-overlay--rotate');
+          if (graphMobileHint) graphMobileHint.hidden = !shouldRotate;
+          renderMoodChart('full');
+          // Focus trap start on close button for accessibility
+          if (graphOverlayClose) graphOverlayClose.focus();
+        });
+        graphOverlayClose.addEventListener('click', closeGraphOverlay);
+        graphOverlay.addEventListener('click', function (e) {
+          if (e.target === graphOverlay) closeGraphOverlay();
+        });
+        window.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && !graphOverlay.hidden) closeGraphOverlay();
+        });
+        // Re-render on orientation change / resize
+        window.addEventListener('orientationchange', function () {
+          if (!graphOverlay.hidden) {
+            // Toggle rotate class appropriately for mobile only
+            var shouldRotate = window.matchMedia('(max-width: 700px)').matches;
+            if (shouldRotate) graphOverlay.classList.add('graph-overlay--rotate'); else graphOverlay.classList.remove('graph-overlay--rotate');
+            if (graphMobileHint) graphMobileHint.hidden = !shouldRotate;
+            renderMoodChart('full');
+          }
+        });
+        window.addEventListener('resize', function () {
+          if (!graphOverlay.hidden) {
+            var shouldRotate = window.matchMedia('(max-width: 700px)').matches;
+            if (shouldRotate) graphOverlay.classList.add('graph-overlay--rotate'); else graphOverlay.classList.remove('graph-overlay--rotate');
+            if (graphMobileHint) graphMobileHint.hidden = !shouldRotate;
+            renderMoodChart('full');
+          }
+        });
+      }
+
+      function closeGraphOverlay() {
+        graphOverlay.hidden = true;
+        document.body.classList.remove('journal-modal-open');
+        hideTooltip(tipFull);
+        if (moodChartFull) moodChartFull.innerHTML = '';
+        // Return focus to expand button for good UX
+        if (graphExpandBtn) graphExpandBtn.focus();
+        if (graphMobileHint) graphMobileHint.hidden = true;
+      }
+
+      function getSelectedMood() {
+        const selected = moodInputs.find(function (input) {
+          return input.checked;
+        });
+        return selected ? selected.value : '4';
+      }
+
+      function setMoodSelection(value) {
+        moodInputs.forEach(function (input) {
+          input.checked = input.value === value;
+        });
+        if (!moodInputs.some(function (input) { return input.checked; })) {
+          const fallback = moodInputs.find(function (input) {
+            return input.value === '4';
+          });
+          if (fallback) {
+            fallback.checked = true;
+          }
+        }
+      }
+
+      function getMoodDetails(value) {
+        const moodMap = {
+          '1': { value: '1', label: 'Unmotivated', emoji: '🌧️' },
+          '2': { value: '2', label: 'Sad', emoji: '😔' },
+          '3': { value: '3', label: 'Peachy', emoji: '🍑' },
+          '4': { value: '4', label: 'Happy', emoji: '😊' },
+          '5': { value: '5', label: 'Motivated', emoji: '⚡' },
+          '6': { value: '6', label: 'Ecstatic', emoji: '✨' }
+        };
+        if (!value || !Object.prototype.hasOwnProperty.call(moodMap, value)) {
+          return null;
+        }
+        return moodMap[value];
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Happy Place 💖 — Entry</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="box" role="main" aria-labelledby="title">
+<h2 id="title">Welcome 💫</h2>
+<p>Please enter the secret code word to continue.</p>
+<input id="pw" class="pwbox" type="password" placeholder="Enter code word..." aria-label="code word" />
+<br>
+<label for="showPw" style="font-size: 0.9em; display: block; margin-top: 0.5em;">
+  <input type="checkbox" id="showPw" /> Show password
+</label>
+<div><button id="enterBtn">Enter</button></div>
+<label style="margin-top: 1em; display: inline-block;"><input type="checkbox" id="remember" /> Remember me on this device</label>
+<p id="error" aria-live="polite"></p>
+<p class="small">Hint: What is your favourite nickname?</p>
+</div>
+<script>
+  document.getElementById('showPw').addEventListener('change', function() {
+    const pwInput = document.getElementById('pw');
+    pwInput.type = this.checked ? 'text' : 'password';
+  });
+</script>
+<script>
+(function(){
+const arr=[103,75,88,89,66,71,75,70,70,79];
+function d(a){return a.map(n=>String.fromCharCode(n^42)).join('')}
+const pwExpected=d(arr);
+const STORAGE_KEY='hp_rem_v2';
+const elPw=document.getElementById('pw');
+const btn=document.getElementById('enterBtn');
+const err=document.getElementById('error');
+const rem=document.getElementById('remember');
+try{if(localStorage.getItem(STORAGE_KEY)===pwExpected){setTimeout(()=>location.href='home.html',200)}}catch(e){}
+function eMsg(t){err.textContent=t}
+function unlock(){
+const v=(elPw.value||'').trim();
+if(!v){eMsg('Please enter the code word.');return}
+if(v===pwExpected){
+try{if(rem.checked){localStorage.setItem(STORAGE_KEY,pwExpected)}else{localStorage.removeItem(STORAGE_KEY)}}catch(e){}
+location.href='home.html'
+}else{eMsg('Incorrect code word.');elPw.value='';elPw.focus()}}
+btn.addEventListener('click',unlock);
+elPw.addEventListener('keydown',function(evt){if(evt.key==='Enter')unlock()});
+elPw.focus();
+})();
+</script>
+</body>
+</html>

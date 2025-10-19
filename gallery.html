@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Photo Memories Gallery</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { padding: clamp(24px, 7vw, 56px); }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      border: 3px solid var(--rose-border);
+      box-shadow: 0 22px 46px var(--rose-shadow);
+      padding: clamp(24px, 6vw, 48px);
+      color: var(--text-main);
+      font-family: 'Quicksand', 'Segoe UI', sans-serif;
+    }
+    .wrap h1 { text-align: center; color: var(--text-heading); font-family: 'Dancing Script', 'Quicksand', cursive; margin-top: 0; }
+    .back { display: inline-flex; align-items: center; gap: .6em; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; text-decoration: none; color: var(--text-heading); }
+    .back::before { content: '\2190'; }
+    .empty { text-align: center; color: rgba(113, 92, 89, .75); }
+
+    /* Inline viewer panel */
+    .gal-panel { position: relative; width: 100%; background: var(--card-bg); border-radius: var(--radius-lg); border: 3px solid var(--rose-border); box-shadow: 0 34px 72px rgba(255, 159, 197, 0.24); padding: clamp(12px, 2.6vw, 18px); display: grid; grid-template-rows: auto 1fr auto; gap: 10px; }
+    .gal-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .gal-title { margin: 0; font-family: 'Dancing Script', 'Quicksand', cursive; color: var(--text-heading); font-size: clamp(1.2rem, 2.6vw, 1.6rem); }
+    .gal-stage { position: relative; border: 2px solid rgba(255,193,214,.55); border-radius: var(--radius-md); background: rgba(255,255,255,.96); display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: clamp(240px, 62vh, 780px); }
+    .gal-stage img, .gal-stage video { max-width: 100%; max-height: 100%; }
+    .gal-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .gal-nav { display: inline-flex; gap: 8px; }
+    .btn { border: 2px solid rgba(255, 159, 197, 0.36); background: rgba(255, 255, 255, 0.96); color: var(--text-heading); border-radius: 999px; padding: 8px 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: .82rem; cursor: pointer; }
+    .btn--primary { background: linear-gradient(135deg, var(--rose-pop), #ffb2d3); color: #fff; border-color: transparent; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+    .status { margin-top: 8px; color: rgba(44,20,32,.75); font-weight: 600; }
+
+    /* Make controls wrap nicely on small screens */
+    @media (max-width: 520px) {
+      .gal-controls { flex-direction: column; align-items: stretch; gap: 12px; }
+      .gal-nav { justify-content: center; }
+      .gal-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <a class="back" href="home.html">Back Home</a>
+  <h1>Photo Memories Gallery</h1>
+  <p id="gal-status" class="status">Halle, we have made so many beautiful memories together. I will continue to add to this gallery throughout the many years to come! I love you so much, look at these whenever you miss me.</p>
+    <section class="gal-panel" aria-label="Viewer">
+      <div class="gal-header">
+        <h2 id="gal-title" class="gal-title">Viewing</h2>
+      </div>
+      <div id="gal-stage" class="gal-stage"></div>
+      <div class="gal-controls">
+        <div class="gal-nav">
+          <button id="gal-prev" class="btn" aria-label="Previous">&#9664; Prev</button>
+          <button id="gal-next" class="btn" aria-label="Next">Next &#9654;</button>
+        </div>
+        <div class="gal-actions">
+          <button id="gal-play" class="btn btn--primary" aria-label="Play">Play</button>
+          <button id="gal-pause" class="btn" aria-label="Pause">Pause</button>
+          <button id="gal-replay" class="btn" aria-label="Replay">Replay</button>
+          <button id="gal-mute" class="btn" aria-label="Mute/Unmute">Unmute</button>
+        </div>
+      </div>
+    </section>
+    <p id="gal-empty" class="empty" hidden>No items found. Add files to <code>/photos</code> and list them in <code>photos/manifest.json</code> or the embedded manifest.</p>
+  </main>
+
+  <script id="gal-manifest" type="application/json">
+  {
+    "items": [
+      { "type": "video", "src": "05998b85-ec65-483b-858b-d533ea5aec3f.mp4" },
+      { "type": "image", "src": "09cb6f7e-5d34-4266-a8c1-b1b461a8e568.jpg" },
+      { "type": "image", "src": "0bbe9833-e5b9-46a4-9fd2-7dda48c8182d.jpg" },
+      { "type": "image", "src": "0bf49e01-c27a-4b07-bd00-8b0865c1b439.jpg" },
+      { "type": "image", "src": "0e03f0a1-f2bb-40dd-b8e2-f7252114ca8e.jpg" },
+      { "type": "image", "src": "1.jpg" },
+      { "type": "image", "src": "10eb476b-bb47-4309-a147-8831a39a0494.jpg" },
+      { "type": "image", "src": "113e4a19-16be-4cab-a53b-6e4e277dd9a3.jpg" },
+      { "type": "image", "src": "146d6ee5-82c8-43c9-b96e-ce5def8dfda2.jpg" },
+      { "type": "image", "src": "15f2e862-1e88-4f4b-aad2-054df29646a8.jpg" },
+      { "type": "image", "src": "173c6fa6-1dd4-4cae-8bc4-10f1fe173a53.jpg" },
+      { "type": "image", "src": "1b59c318-c715-4e15-877e-a33891943e04.jpg" },
+      { "type": "image", "src": "1d277661-4e9f-42c7-9461-4213c0adb638.jpg" },
+      { "type": "image", "src": "1f847749-01c1-4ef6-875d-797adb156fe5.jpg" },
+      { "type": "image", "src": "1fe30206-e72b-4438-9359-7bd380a9678d.jpg" },
+      { "type": "image", "src": "2297e2ef-2b70-488f-8a81-bb201e1aae54.jpg" },
+      { "type": "image", "src": "245ca0d4-59ce-4a5d-9f06-516b1c85d9aa.jpg" },
+      { "type": "image", "src": "2568d585-6836-4996-948b-ec8b5958837d.jpg" },
+      { "type": "image", "src": "259d22eb-a024-4be8-82ef-83391f62f5ac.jpg" },
+      { "type": "image", "src": "25d6ffa2-cdf6-4812-856c-172ca1b19283.jpg" },
+      { "type": "image", "src": "25f75566-8d53-49cb-a208-049101fb9743.jpg" },
+      { "type": "image", "src": "271c582a-36ff-4490-97f6-0f07ba5d316a.jpg" },
+      { "type": "image", "src": "2e35dfe8-b0ad-4b68-bb7d-150271f058e0.jpg" },
+      { "type": "image", "src": "2f149f0e-e160-49c3-8373-e41a5215a6f2.jpg" },
+      { "type": "image", "src": "2ff506bc-c4e2-44ae-9c05-01de9ba01fbc.jpg" },
+      { "type": "video", "src": "2ff75ff7-a599-43db-bb94-7eca453e75ae.mp4" },
+      { "type": "image", "src": "3351e734-ccac-447f-86e2-699591e4768d.jpg" },
+      { "type": "image", "src": "340edf8e-91e9-4614-b6d2-de8eee05bb37.jpg" },
+      { "type": "image", "src": "34b853a5-be37-48cc-859e-01b445cd6d77.jpg" },
+      { "type": "image", "src": "355359e9-5a28-4d65-80d7-31e3f1b6023c.jpg" },
+      { "type": "image", "src": "3783e48d-11a5-4670-a031-2de59c03c340.jpg" },
+      { "type": "image", "src": "3b6d8295-dec4-46e0-b879-6dd8e713ef05.jpg" },
+      { "type": "image", "src": "3bd7b594-88ce-4946-bd1f-4ebd6d34313a.jpg" },
+      { "type": "image", "src": "3f780d45-9416-497e-91bc-24debe51f62f.jpg" },
+      { "type": "image", "src": "410ea78e-5b3f-41eb-938c-36c8a179be1b.jpg" },
+      { "type": "image", "src": "41feb3b0-e787-404f-8aa4-513ce50416d6.jpg" },
+      { "type": "image", "src": "42be7be5-3e95-4a84-9a37-2e0873e4794b.jpg" },
+      { "type": "image", "src": "42d45fb9-bc8f-42b0-a7b7-9c037e76f7ba.jpg" },
+      { "type": "image", "src": "43647722-433a-49b8-87cd-296e5546e54f.jpg" },
+      { "type": "image", "src": "45517325-5990-4079-b8f2-6eef6d6f127f.jpg" },
+      { "type": "image", "src": "493d45f4-c1d8-4c77-96cd-1e8f76cf9106.jpg" },
+      { "type": "image", "src": "4a23ab7a-3283-4c9e-8bc7-1141b639d6f1.jpg" },
+      { "type": "image", "src": "4a64dacf-c4d4-4e76-abf5-ecf7910c951e.jpg" },
+      { "type": "image", "src": "4bcb1713-8d38-491d-9c33-c4cf508af351.jpg" },
+      { "type": "image", "src": "4cf189ae-bbf9-4d6b-b65a-2b0b34c0db4c.jpg" },
+      { "type": "image", "src": "4da1b87e-3b77-4dea-80cf-04d250bc3ed5.jpg" },
+      { "type": "image", "src": "4f3dcaf2-1e07-47a1-b4a8-797be4fa4def.jpg" },
+      { "type": "image", "src": "50733b70-e6d7-499e-8d36-0a278fdc3a13.jpg" },
+      { "type": "image", "src": "5416d883-110d-48b1-a647-b3a6696c7c55.jpg" },
+      { "type": "image", "src": "5614a4ae-d508-4aa4-9773-f9ba76506093.jpg" },
+      { "type": "image", "src": "57746703-2126-4860-81e4-707563b46787.jpg" },
+      { "type": "image", "src": "5a60ec4f-276a-4517-a2b8-d28b00fb4822.jpg" },
+      { "type": "image", "src": "5ae1e134-da84-4212-8b18-b175f6256d22.jpg" },
+      { "type": "image", "src": "5bf9a935-aa53-476c-9c33-d93aeb4fee78.jpg" },
+      { "type": "video", "src": "5f581a69-4118-4560-acfc-d22362703e1b.mp4" },
+      { "type": "image", "src": "5fb1c34b-a1ae-4358-93a7-7aab22faac60.jpg" },
+      { "type": "image", "src": "61988488-03b3-4de2-8098-957e42680919.jpg" },
+      { "type": "image", "src": "634b1ff3-f72a-4847-880e-88936d459784.jpg" },
+      { "type": "image", "src": "64772e83-0611-4a0e-9f3b-6fa5ba5868e4.jpg" },
+      { "type": "image", "src": "687d8b15-5f01-4df2-aaf0-9173aa64fb05.jpg" },
+      { "type": "image", "src": "688a1b70-ccf8-45a3-8a6b-566c0e8633a4.jpg" },
+      { "type": "image", "src": "6995fbe0-f1d6-44c6-ba17-788e4b560f8c.jpg" },
+      { "type": "image", "src": "6ed1fb3a-a55c-44d4-8bbb-76168fb76f88.jpg" },
+      { "type": "image", "src": "719dbb92-3f25-41ac-8314-e9c857cf7949.jpg" },
+      { "type": "image", "src": "71f33f7d-b7fc-4faf-a5cb-0ce00cb56cdd.jpg" },
+      { "type": "image", "src": "72352b96-11ed-4d0d-a98a-d528f028fa27.jpg" },
+      { "type": "image", "src": "74957bf3-6200-4b71-a354-14ff60737861.jpg" },
+      { "type": "image", "src": "7701c520-6588-4540-a951-b823632f0885.jpg" },
+      { "type": "video", "src": "7c6e42c8-2f55-4a6e-b145-802c32e9fd6f.mp4" },
+      { "type": "image", "src": "7d7ebabf-a2b4-4f76-ac32-0982841bdf12.jpg" },
+      { "type": "image", "src": "8a903354-60cd-4a82-9448-1c6ad04792f4.jpg" },
+      { "type": "image", "src": "8aac0672-b935-48f0-9e4b-4ae944ca3765.jpg" },
+      { "type": "image", "src": "8b3c2de0-9b88-4856-8d7f-0f06c1161606.jpg" },
+      { "type": "image", "src": "8d6be228-c215-4312-ae3d-91d7e3a1d69a.jpg" },
+      { "type": "image", "src": "8de24750-6eed-4000-8a23-caa1131fb2ba.jpg" },
+      { "type": "image", "src": "8e6b2660-187f-41d8-8baf-a550ed334131.jpg" },
+      { "type": "image", "src": "8e8e90a5-347d-4203-a886-34a888ae0103.jpg" },
+      { "type": "image", "src": "8eb74d81-1877-48d5-a602-317ad1cc2927.jpg" },
+      { "type": "image", "src": "8fa65e8c-17f6-4b41-9447-58291d8cbf6f.jpg" },
+      { "type": "image", "src": "8feb0850-60ee-4c5b-8074-9c54358cd8f6.jpg" },
+      { "type": "image", "src": "90919690-2899-42de-924c-c00bbc2f16b2.jpg" },
+      { "type": "image", "src": "94de3f8a-0f49-43d0-a166-944ab191b0ce.jpg" },
+      { "type": "image", "src": "953a923b-345c-4a22-b8ac-8dbb30094125.jpg" },
+      { "type": "image", "src": "9ab56f77-50af-4b1a-9889-dd8746b3131f.jpg" },
+      { "type": "image", "src": "9c1affaf-18db-4bb3-af5f-038d42d11eaa.jpg" },
+      { "type": "image", "src": "9c425802-5e19-4674-b5fc-351c109b84ff.jpg" },
+      { "type": "image", "src": "9c991c28-4629-494f-99a2-a9ccb37cdbaf.jpg" },
+      { "type": "image", "src": "a2c09f1f-57a8-446a-963f-fe33298c4a41.jpg" },
+      { "type": "image", "src": "a405a53e-5292-4f8d-a5e3-952b15d582a5.jpg" },
+      { "type": "image", "src": "a53662a8-4770-4701-ae04-13a47789c889.jpg" },
+      { "type": "image", "src": "a59121ac-a2cb-443e-98b9-48c873df701f.jpg" },
+      { "type": "image", "src": "a5a65def-0b65-42a1-9e10-ce124892bf7c.jpg" },
+      { "type": "image", "src": "aa0d172f-3f1e-4a35-9dba-1a474ff6d929.jpg" },
+      { "type": "image", "src": "aaa2a885-7202-44c1-a70e-bb260d5c4840.jpg" },
+      { "type": "image", "src": "ac562934-db34-4a29-aaae-5743f4c3cef4.jpg" },
+      { "type": "image", "src": "b15d7fc0-a088-4073-a0db-2cbdc74a9beb.jpg" },
+      { "type": "image", "src": "b1af6f13-692c-4543-bf09-5875f4b14137.jpg" },
+      { "type": "image", "src": "b38345b2-f8b8-484a-b7a7-70f67cf741c5.jpg" },
+      { "type": "image", "src": "b4cb23aa-c5e6-41cc-bc81-f461c4eea176.jpg" },
+      { "type": "image", "src": "b50fd62b-de95-44e1-94b1-817501250bee.jpg" },
+      { "type": "image", "src": "b6f05b1b-e171-4f1f-80dc-770e2b7463e8.jpg" },
+      { "type": "image", "src": "b9b0abe1-6a74-4b6a-bd28-0d1003232924.jpg" },
+      { "type": "image", "src": "bf4a2ed2-8f22-4123-9004-bcbd74a87ed8.jpg" },
+      { "type": "image", "src": "c08851a8-c966-41c7-b0c0-ddbc5c65ab16.jpg" },
+      { "type": "image", "src": "c0ffac38-4e23-4db4-9087-e6f29f0e5ee3.jpg" },
+      { "type": "image", "src": "c1c80819-c07c-4a25-a252-a752537a962f.jpg" },
+      { "type": "image", "src": "c254f903-8660-44f7-9bc8-a8e40831e1da.jpg" },
+      { "type": "image", "src": "c3571c49-bee5-4c2e-af68-decc762ffb20.jpg" },
+      { "type": "image", "src": "c36ddfd4-7ac4-4afb-8972-a9271954b127.jpg" },
+      { "type": "image", "src": "c38f4aef-c6d6-4024-ae5f-bf5ca4b1d7d2.jpg" },
+      { "type": "image", "src": "c4d4cc72-aeb5-43c3-a462-4b3f60e8c088.jpg" },
+      { "type": "image", "src": "c62852f2-0997-47a3-a336-f4e244f684d9 (1).jpg" },
+      { "type": "image", "src": "c62852f2-0997-47a3-a336-f4e244f684d9.jpg" },
+      { "type": "image", "src": "c6da09b0-faca-4d47-9cd1-98bb9d8fce89.jpg" },
+      { "type": "image", "src": "c7359602-76b6-48d5-9b53-f6007831c1c8.jpg" },
+      { "type": "image", "src": "c75f992c-f83c-4af0-8715-95d28865bf46.jpg" },
+      { "type": "image", "src": "c775a78c-442f-47b1-9380-04b69aae8271.jpg" },
+      { "type": "image", "src": "c92a364b-ee2c-4551-ab0c-223887423afd.jpg" },
+      { "type": "image", "src": "c9f89146-5dc9-4883-af13-564a954b0ae5.jpg" },
+      { "type": "image", "src": "cbf640f1-2e0d-4219-94bb-f24e42871590.jpg" },
+      { "type": "image", "src": "cca151e7-6a21-4ab4-b149-504cdbac12b6.jpg" },
+      { "type": "image", "src": "cfe3c533-f871-45a1-8d0b-df1ec46e11f6.jpg" },
+      { "type": "image", "src": "d24374b0-8264-44a9-9bb4-1d464e95bba1.jpg" },
+      { "type": "image", "src": "d2c29cc1-ddfb-48eb-91eb-6aab6d7ce9d7.jpg" },
+      { "type": "image", "src": "d399ff0d-fa32-47ee-a73f-04263dfe2841.jpg" },
+      { "type": "video", "src": "d627827b-2a0c-4547-9131-0c10e55102ae.mp4" },
+      { "type": "image", "src": "d7728a38-188a-41e4-a5b0-0e36510d20da.jpg" },
+      { "type": "image", "src": "d7ab09f1-0009-48db-b100-cc31a237684e.jpg" },
+      { "type": "image", "src": "d7ddb055-0a10-42c1-a75d-7e82a85966c9.jpg" },
+      { "type": "image", "src": "da5ca100-db5e-4db8-a158-fd5f589c3b44.jpg" },
+      { "type": "image", "src": "dce00a29-9b15-4844-beed-687015a7a6ee.jpg" },
+      { "type": "image", "src": "ddd9d308-2fde-4aff-a52a-4938e04b652e.jpg" },
+      { "type": "image", "src": "de8a7230-3414-49fc-91af-4444e9502777 (1).jpg" },
+      { "type": "image", "src": "de8a7230-3414-49fc-91af-4444e9502777.jpg" },
+      { "type": "image", "src": "e0ddc428-aa44-4d53-92eb-bc645d9934eb.jpg" },
+      { "type": "image", "src": "e433a96f-8825-4065-be74-ce09d5add1d2.jpg" },
+      { "type": "image", "src": "e729ff15-6a77-47c1-afa2-9792d591f20a.jpg" },
+      { "type": "image", "src": "f0134942-affe-469c-bda3-3ad74c7159bf.jpg" },
+      { "type": "video", "src": "f11c3bbb-b353-4af1-99d5-cad4769647be.mp4" },
+      { "type": "image", "src": "f28f33c8-23c8-46eb-8d25-37a09edc2954.jpg" },
+      { "type": "image", "src": "f358bb73-cd3d-46a4-a051-20801f781024.jpg" },
+      { "type": "image", "src": "f3ffe74d-0a49-4015-88c3-8cf5c86743cf.jpg" },
+      { "type": "image", "src": "f45384c6-092f-47e8-b09d-d8c785279f3e.jpg" },
+      { "type": "image", "src": "f70e05bd-15e4-42a3-95f4-7c0bb750d9c2.jpg" },
+      { "type": "image", "src": "f7f0155d-a045-4401-bbd3-52abad3f1fca.jpg" },
+      { "type": "image", "src": "f88bbeca-9764-4562-9822-cc72f680909d.jpg" },
+      { "type": "image", "src": "fd9c3492-8fba-4a1f-9876-34dc97f43545.jpg" }
+    ]
+  }
+  </script>
+
+  <script>
+    (function(){
+      var EMPTY = document.getElementById('gal-empty');
+      var STATUS = document.getElementById('gal-status');
+      var STAGE = document.getElementById('gal-stage');
+      var TITLE = document.getElementById('gal-title');
+      var BTN_PREV = document.getElementById('gal-prev');
+      var BTN_NEXT = document.getElementById('gal-next');
+      var BTN_PLAY = document.getElementById('gal-play');
+      var BTN_PAUSE = document.getElementById('gal-pause');
+      var BTN_REPLAY = document.getElementById('gal-replay');
+      var BTN_MUTE = document.getElementById('gal-mute');
+
+  var media = [];
+      var index = -1;
+      var lastFocus = null;
+  var SOURCE = 'unknown';
+
+  init();
+
+      function srcUrl(name){
+        return 'photos/' + encodeURIComponent(name);
+      }
+
+      function init(){
+        loadManifest().then(function(items){
+          if (!items || !items.length) {
+            EMPTY.hidden = false;
+            return;
+          }
+          media = shuffle(items.slice());
+          showAt(0);
+        }).catch(function(){
+          EMPTY.hidden = false;
+        });
+
+        BTN_PREV.addEventListener('click', function(){ showAt(index - 1); });
+        BTN_NEXT.addEventListener('click', function(){ showAt(index + 1); });
+        BTN_PLAY.addEventListener('click', playActive);
+        BTN_PAUSE.addEventListener('click', pauseActive);
+        BTN_REPLAY.addEventListener('click', replayActive);
+        BTN_MUTE.addEventListener('click', toggleMute);
+        document.addEventListener('keydown', function(e){
+          if (e.key === 'ArrowLeft') showAt(index - 1);
+          if (e.key === 'ArrowRight') showAt(index + 1);
+        });
+
+        // Basic swipe navigation for mobile
+        var touchStartX = 0, touchStartY = 0;
+        STAGE.addEventListener('touchstart', function(e){
+          if (!e.touches || e.touches.length !== 1) return;
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        STAGE.addEventListener('touchend', function(e){
+          var dx = (e.changedTouches && e.changedTouches[0].clientX || 0) - touchStartX;
+          var dy = (e.changedTouches && e.changedTouches[0].clientY || 0) - touchStartY;
+          if (Math.abs(dx) > 50 && Math.abs(dy) < 40) {
+            if (dx < 0) showAt(index + 1); else showAt(index - 1);
+          }
+        });
+      }
+
+      function loadManifest(){
+        // Prefer embedded manifest for maximum reliability; fall back to fetching local JSON
+        var embedded = getEmbeddedManifest();
+        if (embedded && embedded.length) {
+          SOURCE = 'embedded manifest';
+          return Promise.resolve(embedded);
+        }
+        var url = 'photos/manifest.json?_=' + Date.now();
+        return fetch(url)
+          .then(function(res){ if (!res.ok) throw new Error('Missing manifest'); return res.json(); })
+          .then(function(json){
+            var items = Array.isArray(json) ? json : (json && Array.isArray(json.items) ? json.items : []);
+            SOURCE = 'local manifest file';
+            return items || [];
+          })
+          .catch(function(){
+            SOURCE = 'none';
+            return [];
+          });
+      }
+
+      function getEmbeddedManifest(){
+        var script = document.getElementById('gal-manifest');
+        if (!script) return [];
+        try {
+          var json = JSON.parse(script.textContent || script.innerText || '{}');
+          if (Array.isArray(json)) return json;
+          if (json && Array.isArray(json.items)) return json.items;
+        } catch (e) {}
+        return [];
+      }
+
+      function shuffle(arr){
+        for (var i = arr.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = arr[i]; arr[i] = arr[j]; arr[j] = t; }
+        return arr;
+      }
+
+      // No grid; we render single item in the stage only
+
+      // Overlay removed: single-item viewer only
+
+      function clampIndex(i){
+        if (i < 0) return media.length - 1; if (i >= media.length) return 0; return i;
+      }
+
+      function clearStage(){
+        STAGE.innerHTML = '';
+      }
+
+      function showAt(i){
+        index = clampIndex(i);
+        clearStage();
+        var item = media[index];
+        TITLE.textContent = (item.title || (item.type === 'video' ? 'Video' : 'Photo'));
+        if (item.type === 'image'){
+          var img = document.createElement('img'); img.src = srcUrl(item.src); img.alt = item.alt || '';
+          STAGE.appendChild(img);
+          setVideoButtonsEnabled(false);
+        } else if (item.type === 'video'){
+          var vid = document.createElement('video');
+          vid.src = srcUrl(item.src);
+          vid.controls = false;
+          vid.playsInline = true;
+          vid.autoplay = true;
+          vid.muted = false; // try autoplay with sound
+          vid.setAttribute('webkit-playsinline', '');
+          STAGE.appendChild(vid);
+
+          // Try autoplay with sound; fall back to muted if blocked
+          vid.play().then(function(){
+            updateMuteButtonLabel();
+          }).catch(function(){
+            vid.muted = true;
+            vid.play().catch(function(){});
+            updateMuteButtonLabel();
+          });
+
+          setVideoButtonsEnabled(true);
+          updateMuteButtonLabel();
+        }
+      }
+
+      function setVideoButtonsEnabled(enabled){
+        BTN_PLAY.disabled = !enabled; BTN_PAUSE.disabled = !enabled; BTN_REPLAY.disabled = !enabled; BTN_MUTE.disabled = !enabled;
+      }
+
+      function getActiveVideo(){
+        var v = STAGE.querySelector('video'); return v || null;
+      }
+
+      function playActive(){ var v = getActiveVideo(); if (v) { v.play().catch(function(){}); } }
+      function pauseActive(){ var v = getActiveVideo(); if (v) { v.pause(); } }
+      function replayActive(){ var v = getActiveVideo(); if (v) { v.currentTime = 0; v.play().catch(function(){}); } }
+      function toggleMute(){ var v = getActiveVideo(); if (v) { v.muted = !v.muted; updateMuteButtonLabel(); } }
+      function updateMuteButtonLabel(){ var v = getActiveVideo(); BTN_MUTE.textContent = (v && !v.muted) ? 'Mute' : 'Unmute'; }
+    })();
+  </script>
+</body>
+</html>
