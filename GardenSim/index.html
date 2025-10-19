@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halle's Special Garden</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Main Menu -->
+    <div id="mainMenu" class="main-menu">
+        <div class="menu-container">
+            <div class="menu-hero">
+                <span class="menu-badge">10 Month Anniversary</span>
+                <h1>🌸 Halle's Special Garden</h1>
+                <p class="menu-lead">Happy 10 months, Halle! Return to this garden whenever you need some time away.</p>
+                <p class="menu-note">Select a garden slot to begin—your progress saves automatically on this device.</p>
+            </div>
+
+            <div class="menu-divider" aria-hidden="true"></div>
+
+            <div class="menu-actions">
+                <h2 class="menu-actions-title">Choose Your Garden</h2>
+
+                <div class="save-slots">
+                <div class="save-slot" data-slot="1">
+                    <div class="slot-header">
+                        <h3>Garden Slot 1</h3>
+                        <button type="button" class="slot-rename-btn" data-slot="1" aria-label="Rename garden slot 1" title="Rename garden slot">✏️</button>
+                    </div>
+                    <div class="slot-name" aria-live="polite">
+                        <span class="slot-name-display"></span>
+                        <input type="text" class="slot-name-input" maxlength="40" aria-label="Edit garden slot 1 name">
+                    </div>
+                    <div class="slot-status">Empty</div>
+                    <div class="slot-date"></div>
+                    <div class="slot-buttons">
+                        <button class="load-btn" disabled>Load Garden</button>
+                        <button class="new-btn">New Garden</button>
+                    </div>
+                </div>
+                
+                <div class="save-slot" data-slot="2">
+                    <div class="slot-header">
+                        <h3>Garden Slot 2</h3>
+                        <button type="button" class="slot-rename-btn" data-slot="2" aria-label="Rename garden slot 2" title="Rename garden slot">✏️</button>
+                    </div>
+                    <div class="slot-name" aria-live="polite">
+                        <span class="slot-name-display"></span>
+                        <input type="text" class="slot-name-input" maxlength="40" aria-label="Edit garden slot 2 name">
+                    </div>
+                    <div class="slot-status">Empty</div>
+                    <div class="slot-date"></div>
+                    <div class="slot-buttons">
+                        <button class="load-btn" disabled>Load Garden</button>
+                        <button class="new-btn">New Garden</button>
+                    </div>
+                </div>
+                
+                <div class="save-slot" data-slot="3">
+                    <div class="slot-header">
+                        <h3>Garden Slot 3</h3>
+                        <button type="button" class="slot-rename-btn" data-slot="3" aria-label="Rename garden slot 3" title="Rename garden slot">✏️</button>
+                    </div>
+                    <div class="slot-name" aria-live="polite">
+                        <span class="slot-name-display"></span>
+                        <input type="text" class="slot-name-input" maxlength="40" aria-label="Edit garden slot 3 name">
+                    </div>
+                    <div class="slot-status">Empty</div>
+                    <div class="slot-date"></div>
+                    <div class="slot-buttons">
+                        <button class="load-btn" disabled>Load Garden</button>
+                        <button class="new-btn">New Garden</button>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="gameContainer" class="game-container" style="display: none;">
+        <div class="game-header">
+            <div class="header-top">
+                <div class="header-controls">
+                    <button id="menuBtn" class="menu-btn">🏠 Menu</button>
+                    <button id="adminBtn" class="admin-btn" type="button" aria-haspopup="dialog" aria-controls="adminModal">⚙️ Admin</button>
+                    <button id="soundBtn" class="sound-btn" type="button">🔊 Sound</button>
+                </div>
+                <div class="resource-summary" role="status" aria-live="polite">
+                    <div class="resource-chip">
+                        <span class="chip-icon">💰</span>
+                        <span class="chip-label">Money</span>
+                        <span id="money" class="chip-value">0</span>
+                    </div>
+                    <div class="resource-chip">
+                        <span class="chip-icon">💧</span>
+                        <span class="chip-label">Water</span>
+                        <span id="water" class="chip-value">0</span>
+                    </div>
+                    <div class="resource-chip">
+                        <span class="chip-icon">🌱</span>
+                        <span class="chip-label">Fertilizer</span>
+                        <span id="fertilizer" class="chip-value">0</span>
+                    </div>
+                    <div class="resource-chip">
+                        <span class="chip-icon">⭐</span>
+                        <span class="chip-label">Score</span>
+                        <span id="score" class="chip-value">0</span>
+                    </div>
+                    <div class="resource-chip">
+                        <span class="chip-icon">🌤️</span>
+                        <span class="chip-label">Weather</span>
+                        <span id="weather" class="chip-value">Sunny</span>
+                    </div>
+                    <div class="resource-chip">
+                        <span class="chip-icon">🏆</span>
+                        <span class="chip-label">Achievements</span>
+                        <span id="achievements" class="chip-value">0/0</span>
+                    </div>
+                    <div class="resource-chip">
+                        <span class="chip-icon">♻️</span>
+                        <span class="chip-label">Rebirths</span>
+                        <span id="rebirthCount" class="chip-value">0</span>
+                    </div>
+                </div>
+                <div class="rebirth-panel" role="status" aria-live="polite">
+                    <div id="rebirthSummary" class="rebirth-info">Cycle 0 · Next target: 5,000 score</div>
+                    <button id="rebirthBtn" class="rebirth-btn" type="button" disabled>♻️ Rebirth Locked</button>
+                </div>
+            </div>
+
+            <div class="game-content">
+                <aside class="sidebar">
+                    <section class="sidebar-card shop-section">
+                        <h2 class="sidebar-title">🌼 Garden Shop</h2>
+                        <div class="accordion" id="shopAccordion">
+                            <div class="accordion-item">
+                                <button class="accordion-trigger" id="shopSeedsToggle" type="button" aria-expanded="true" aria-controls="shopSeedsPanel">
+                                    <span class="trigger-label">🌱 Seeds</span>
+                                    <span class="accordion-icon">⌄</span>
+                                </button>
+                                <div id="shopSeedsPanel" class="accordion-panel is-open" role="region" aria-labelledby="shopSeedsToggle">
+                                    <div class="seed-shop">
+                                        <h3>🌱 Seed Shop</h3>
+                                        <div class="seed-category">
+                                            <h4>🥕 Farm Fresh Veggies</h4>
+                                            <div class="seed-list">
+                                                <div class="seed-item" data-seed="carrot">
+                                                    <span class="seed-icon" aria-hidden="true">🥕</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Carrot</span>
+                                                        <span class="seed-price">$5</span>
+                                                        <span class="seed-stock">Stock: 7</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="lettuce">
+                                                    <span class="seed-icon" aria-hidden="true">🥬</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Lettuce</span>
+                                                        <span class="seed-price">$3</span>
+                                                        <span class="seed-stock">Stock: 8</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="radish">
+                                                    <span class="seed-icon" aria-hidden="true">🌶️</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Radish</span>
+                                                        <span class="seed-price">$4</span>
+                                                        <span class="seed-stock">Stock: 8</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="spinach">
+                                                    <span class="seed-icon" aria-hidden="true">🥬</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Spinach</span>
+                                                        <span class="seed-price">$6</span>
+                                                        <span class="seed-stock">Stock: 7</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="peas">
+                                                    <span class="seed-icon" aria-hidden="true">🟢</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Peas</span>
+                                                        <span class="seed-price">$7</span>
+                                                        <span class="seed-stock">Stock: 8</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="tomato">
+                                                    <span class="seed-icon" aria-hidden="true">🍅</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Tomato</span>
+                                                        <span class="seed-price">$8</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="corn">
+                                                    <span class="seed-icon" aria-hidden="true">🌽</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Corn</span>
+                                                        <span class="seed-price">$12</span>
+                                                        <span class="seed-stock">Stock: 4</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="cucumber">
+                                                    <span class="seed-icon" aria-hidden="true">🥒</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Cucumber</span>
+                                                        <span class="seed-price">$6</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="zucchini">
+                                                    <span class="seed-icon" aria-hidden="true">🥒</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Zucchini</span>
+                                                        <span class="seed-price">$9</span>
+                                                        <span class="seed-stock">Stock: 5</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="bell_pepper">
+                                                    <span class="seed-icon" aria-hidden="true">🫑</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Bell Pepper</span>
+                                                        <span class="seed-price">$10</span>
+                                                        <span class="seed-stock">Stock: 4</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="potato">
+                                                    <span class="seed-icon" aria-hidden="true">🥔</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Potato</span>
+                                                        <span class="seed-price">$7</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="onion">
+                                                    <span class="seed-icon" aria-hidden="true">🧅</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Onion</span>
+                                                        <span class="seed-price">$4</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="garlic">
+                                                    <span class="seed-icon" aria-hidden="true">🧄</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Garlic</span>
+                                                        <span class="seed-price">$5</span>
+                                                        <span class="seed-stock">Stock: 4</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="celery">
+                                                    <span class="seed-icon" aria-hidden="true">🥬</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Celery</span>
+                                                        <span class="seed-price">$6</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="cabbage">
+                                                    <span class="seed-icon" aria-hidden="true">🥬</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Cabbage</span>
+                                                        <span class="seed-price">$8</span>
+                                                        <span class="seed-stock">Stock: 5</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="broccoli">
+                                                    <span class="seed-icon" aria-hidden="true">🥦</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Broccoli</span>
+                                                        <span class="seed-price">$11</span>
+                                                        <span class="seed-stock">Stock: 3</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="cauliflower">
+                                                    <span class="seed-icon" aria-hidden="true">🥦</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Cauliflower</span>
+                                                        <span class="seed-price">$14</span>
+                                                        <span class="seed-stock">Stock: 2</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="squash">
+                                                    <span class="seed-icon" aria-hidden="true">🍠</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Squash</span>
+                                                        <span class="seed-price">$15</span>
+                                                        <span class="seed-stock">Stock: 5</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="pumpkin">
+                                                    <span class="seed-icon" aria-hidden="true">🎃</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Pumpkin</span>
+                                                        <span class="seed-price">$25</span>
+                                                        <span class="seed-stock">Stock: 1</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="winter_greens">
+                                                    <span class="seed-icon" aria-hidden="true">🥬</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Winter Greens</span>
+                                                        <span class="seed-price">$20</span>
+                                                        <span class="seed-stock">Stock: 4</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="herbs">
+                                                    <span class="seed-icon" aria-hidden="true">🌿</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Herbs</span>
+                                                        <span class="seed-price">$15</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="avocado">
+                                                    <span class="seed-icon" aria-hidden="true">🥑</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Avocado</span>
+                                                        <span class="seed-price">$14</span>
+                                                        <span class="seed-stock">Stock: 4</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="sweet_potato">
+                                                    <span class="seed-icon" aria-hidden="true">🍠</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Sweet Potato</span>
+                                                        <span class="seed-price">$9</span>
+                                                        <span class="seed-stock">Stock: 5</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="eggplant">
+                                                    <span class="seed-icon" aria-hidden="true">🍆</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Eggplant</span>
+                                                        <span class="seed-price">$11</span>
+                                                        <span class="seed-stock">Stock: 4</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="hot_pepper">
+                                                    <span class="seed-icon" aria-hidden="true">🌶️</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Hot Pepper</span>
+                                                        <span class="seed-price">$9</span>
+                                                        <span class="seed-stock">Stock: 5</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="mushroom">
+                                                    <span class="seed-icon" aria-hidden="true">🍄</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Mushroom</span>
+                                                        <span class="seed-price">$12</span>
+                                                        <span class="seed-stock">Stock: 4</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="seed-category">
+                                            <h4>🍓 Fruit Orchard</h4>
+                                            <div class="seed-list">
+                                                <div class="seed-item" data-seed="apple">
+                                                    <span class="seed-icon" aria-hidden="true">🍎</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Apple</span>
+                                                        <span class="seed-price">$12</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="green_apple">
+                                                    <span class="seed-icon" aria-hidden="true">🍏</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Green Apple</span>
+                                                        <span class="seed-price">$12</span>
+                                                        <span class="seed-stock">Stock: 5</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="pear">
+                                                    <span class="seed-icon" aria-hidden="true">🍐</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Pear</span>
+                                                        <span class="seed-price">$13</span>
+                                                        <span class="seed-stock">Stock: 5</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="peach">
+                                                    <span class="seed-icon" aria-hidden="true">🍑</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Peach</span>
+                                                        <span class="seed-price">$14</span>
+                                                        <span class="seed-stock">Stock: 5</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="cherries">
+                                                    <span class="seed-icon" aria-hidden="true">🍒</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Cherries</span>
+                                                        <span class="seed-price">$10</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="strawberry">
+                                                    <span class="seed-icon" aria-hidden="true">🍓</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Strawberry</span>
+                                                        <span class="seed-price">$9</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="orange">
+                                                    <span class="seed-icon" aria-hidden="true">🍊</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Orange</span>
+                                                        <span class="seed-price">$11</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="lemon">
+                                                    <span class="seed-icon" aria-hidden="true">🍋</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Lemon</span>
+                                                        <span class="seed-price">$9</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item" data-seed="banana">
+                                                    <span class="seed-icon" aria-hidden="true">🍌</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Banana</span>
+                                                        <span class="seed-price">$11</span>
+                                                        <span class="seed-stock">Stock: 6</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="seed-category">
+                                            <h4>⭐ Rare Exotics</h4>
+                                            <div class="seed-list">
+                                                <div class="seed-item rare-seed" data-seed="watermelon">
+                                                    <span class="seed-icon" aria-hidden="true">🍉</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Watermelon (RARE)</span>
+                                                        <span class="seed-price">$22</span>
+                                                        <span class="seed-stock">Stock: 2</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item rare-seed" data-seed="melon">
+                                                    <span class="seed-icon" aria-hidden="true">🍈</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Melon (RARE)</span>
+                                                        <span class="seed-price">$18</span>
+                                                        <span class="seed-stock">Stock: 3</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item rare-seed" data-seed="blueberry">
+                                                    <span class="seed-icon" aria-hidden="true">🫐</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Blueberry (RARE)</span>
+                                                        <span class="seed-price">$17</span>
+                                                        <span class="seed-stock">Stock: 3</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item rare-seed" data-seed="kiwi">
+                                                    <span class="seed-icon" aria-hidden="true">🥝</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Kiwi (RARE)</span>
+                                                        <span class="seed-price">$22</span>
+                                                        <span class="seed-stock">Stock: 2</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item rare-seed" data-seed="coconut">
+                                                    <span class="seed-icon" aria-hidden="true">🥥</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Coconut (RARE)</span>
+                                                        <span class="seed-price">$24</span>
+                                                        <span class="seed-stock">Stock: 2</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item rare-seed" data-seed="olive">
+                                                    <span class="seed-icon" aria-hidden="true">🫒</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Olive (RARE)</span>
+                                                        <span class="seed-price">$21</span>
+                                                        <span class="seed-stock">Stock: 2</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item rare-seed" data-seed="asparagus">
+                                                    <span class="seed-icon" aria-hidden="true">🥬</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Asparagus (RARE)</span>
+                                                        <span class="seed-price">$13</span>
+                                                        <span class="seed-stock">Stock: 3</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item rare-seed" data-seed="artichoke">
+                                                    <span class="seed-icon" aria-hidden="true">🥬</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Artichoke (RARE)</span>
+                                                        <span class="seed-price">$16</span>
+                                                        <span class="seed-stock">Stock: 2</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="seed-category">
+                                            <h4>🌟 Legendary Harvests</h4>
+                                            <div class="seed-list">
+                                                <div class="seed-item legendary-seed" data-seed="grapes">
+                                                    <span class="seed-icon" aria-hidden="true">🍇</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Grapes (LEGENDARY)</span>
+                                                        <span class="seed-price">$22</span>
+                                                        <span class="seed-stock">Stock: 3</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item legendary-seed" data-seed="pineapple">
+                                                    <span class="seed-icon" aria-hidden="true">🍍</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Pineapple (LEGENDARY)</span>
+                                                        <span class="seed-price">$30</span>
+                                                        <span class="seed-stock">Stock: 1</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item legendary-seed" data-seed="mango">
+                                                    <span class="seed-icon" aria-hidden="true">🥭</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Mango (LEGENDARY)</span>
+                                                        <span class="seed-price">$28</span>
+                                                        <span class="seed-stock">Stock: 2</span>
+                                                    </div>
+                                                </div>
+                                                <div class="seed-item legendary-seed" data-seed="dragonfruit">
+                                                    <span class="seed-icon" aria-hidden="true">🐉</span>
+                                                    <div class="seed-info">
+                                                        <span class="seed-name">Dragonfruit (LEGENDARY)</span>
+                                                        <span class="seed-price">$35</span>
+                                                        <span class="seed-stock">Stock: 1</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <button class="accordion-trigger" id="shopEssentialsToggle" type="button" aria-expanded="false" aria-controls="shopEssentialsPanel">
+                                    <span class="trigger-label">💧 Essentials</span>
+                                    <span class="accordion-icon">⌄</span>
+                                </button>
+                                <div id="shopEssentialsPanel" class="accordion-panel" role="region" aria-labelledby="shopEssentialsToggle">
+                                    <div class="purchase-shop">
+                                        <h3>💧 Water &amp; Fertilizer</h3>
+                                        <div class="purchase-section">
+                                            <div class="purchase-item">
+                                                <div class="purchase-info">
+                                                    <span class="purchase-name">💧 Water</span>
+                                                    <span class="purchase-price">$5</span>
+                                                    <span class="purchase-description">Water your plants for faster growth</span>
+                                                </div>
+                                                <button class="purchase-btn" onclick="if(window.game) window.game.buyWater()">Buy Water</button>
+                                            </div>
+                                            <div class="purchase-item">
+                                                <div class="purchase-info">
+                                                    <span class="purchase-name">🌱 Fertilizer</span>
+                                                    <span class="purchase-price">$10</span>
+                                                    <span class="purchase-description">Fertilize your plants for maximum growth</span>
+                                                </div>
+                                                <button class="purchase-btn" onclick="if(window.game) window.game.buyFertilizer()">Buy Fertilizer</button>
+                                            </div>
+                                        </div>
+                                        <div class="purchase-section garden-expansion">
+                                            <h4>🌿 Garden Upgrades</h4>
+                                            <div class="purchase-item">
+                                                <div class="purchase-info">
+                                                    <span class="purchase-name">🌿 Expand Garden</span>
+                                                    <span class="purchase-price">$5000</span>
+                                                    <span class="purchase-description">Unlock two extra tiles in every direction.</span>
+                                                </div>
+                                                <button id="expandShopBtn" class="purchase-btn" type="button">🌿 Expand Garden</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <button class="accordion-trigger" id="shopSprinklersToggle" type="button" aria-expanded="false" aria-controls="shopSprinklersPanel">
+                                    <span class="trigger-label">💦 Sprinklers</span>
+                                    <span class="accordion-icon">⌄</span>
+                                </button>
+                                <div id="shopSprinklersPanel" class="accordion-panel" role="region" aria-labelledby="shopSprinklersToggle">
+                                    <div class="sprinkler-shop">
+                                        <div class="section-heading">
+                                            <h3>💧 Sprinkler Shop</h3>
+                                            <button class="info-trigger" type="button" aria-label="Sprinkler system details" aria-controls="tooltip-shop-sprinklers" aria-expanded="false">?</button>
+                                        </div>
+                                        <div id="tooltip-shop-sprinklers" class="tooltip-card" role="tooltip" hidden>
+                                            <ul>
+                                                <li>Sprinklers affect all plants within their range.</li>
+                                                <li>Multiple sprinklers stack their effects.</li>
+                                                <li>Use the shovel tool to remove any placed sprinkler.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="sprinkler-item" data-sprinkler="basic">
+                                            <div class="sprinkler-info">
+                                                <span class="sprinkler-name">💧 Basic Sprinkler</span>
+                                                <span class="sprinkler-price" id="sprinkler-basic-price">$50</span>
+                                                <span class="sprinkler-count" id="sprinkler-basic-count">0</span>
+                                            </div>
+                                            <span class="sprinkler-desc">+20% growth, 1 tile range</span>
+                                        </div>
+                                        <div class="sprinkler-item" data-sprinkler="advanced">
+                                            <div class="sprinkler-info">
+                                                <span class="sprinkler-name">🌊 Advanced Sprinkler</span>
+                                                <span class="sprinkler-price" id="sprinkler-advanced-price">$150</span>
+                                                <span class="sprinkler-count" id="sprinkler-advanced-count">0</span>
+                                            </div>
+                                            <span class="sprinkler-desc">+40% growth, +10% water efficiency, 2 tile range</span>
+                                        </div>
+                                        <div class="sprinkler-item" data-sprinkler="premium">
+                                            <div class="sprinkler-info">
+                                                <span class="sprinkler-name">🌈 Premium Sprinkler</span>
+                                                <span class="sprinkler-price" id="sprinkler-premium-price">$300</span>
+                                                <span class="sprinkler-count" id="sprinkler-premium-count">0</span>
+                                            </div>
+                                            <span class="sprinkler-desc">+60% growth, +20% water, +10% fertilizer, 2 tile range</span>
+                                        </div>
+                                        <div class="sprinkler-item" data-sprinkler="legendary">
+                                            <div class="sprinkler-info">
+                                                <span class="sprinkler-name">⭐ Legendary Sprinkler</span>
+                                                <span class="sprinkler-price" id="sprinkler-legendary-price">$500</span>
+                                                <span class="sprinkler-count" id="sprinkler-legendary-count">0</span>
+                                            </div>
+                                            <span class="sprinkler-desc">+80% growth, +30% water, +20% fertilizer, 3 tile range</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <button class="accordion-trigger" id="shopDecorToggle" type="button" aria-expanded="false" aria-controls="shopDecorPanel">
+                                    <span class="trigger-label">🌸 Decorations</span>
+                                    <span class="accordion-icon">⌄</span>
+                                </button>
+                                <div id="shopDecorPanel" class="accordion-panel" role="region" aria-labelledby="shopDecorToggle">
+                                    <div class="decoration-shop">
+                                        <h3>🌸 Garden Decorations</h3>
+                                        <div class="decoration-categories">
+                                            <button class="category-btn active" data-category="all">All</button>
+                                            <button class="category-btn" data-category="path">Paths</button>
+                                            <button class="category-btn" data-category="statue">Statues</button>
+                                            <button class="category-btn" data-category="fence">Fences</button>
+                                            <button class="category-btn" data-category="flower">Flowers</button>
+                                            <button class="category-btn" data-category="seasonal">Seasonal</button>
+                                        </div>
+
+                                        <div class="decoration-grid">
+                                            <div class="decoration-item" data-decoration="stone_path" data-category="path">
+                                                <div class="decoration-icon">🛣️</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Stone Path</div>
+                                                    <div class="decoration-cost">$25</div>
+                                                    <div class="decoration-description">Beautiful stone pathway</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="wooden_path" data-category="path">
+                                                <div class="decoration-icon">🛤️</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Wooden Path</div>
+                                                    <div class="decoration-cost">$15</div>
+                                                    <div class="decoration-description">Rustic wooden walkway</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="flower_bed" data-category="flower">
+                                                <div class="decoration-icon">🌸</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Flower Bed</div>
+                                                    <div class="decoration-cost">$50</div>
+                                                    <div class="decoration-description">Attracts beneficial insects</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="garden_gnome" data-category="statue">
+                                                <div class="decoration-icon">🧙</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Garden Gnome</div>
+                                                    <div class="decoration-cost">$100</div>
+                                                    <div class="decoration-description">Magical garden guardian</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="bird_bath" data-category="statue">
+                                                <div class="decoration-icon">🛁</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Bird Bath</div>
+                                                    <div class="decoration-cost">$75</div>
+                                                    <div class="decoration-description">Attracts helpful birds</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="sundial" data-category="statue">
+                                                <div class="decoration-icon">⏰</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Sundial</div>
+                                                    <div class="decoration-cost">$200</div>
+                                                    <div class="decoration-description">Ancient time-keeping wisdom</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="picket_fence" data-category="fence">
+                                                <div class="decoration-icon">🏡</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Picket Fence</div>
+                                                    <div class="decoration-cost">$30</div>
+                                                    <div class="decoration-description">Classic garden border</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="stone_wall" data-category="fence">
+                                                <div class="decoration-icon">🧱</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Stone Wall</div>
+                                                    <div class="decoration-cost">$80</div>
+                                                    <div class="decoration-description">Sturdy garden defense</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="christmas_lights" data-category="seasonal">
+                                                <div class="decoration-icon">🎄</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Christmas Lights</div>
+                                                    <div class="decoration-cost">$150</div>
+                                                    <div class="decoration-description">Festive winter cheer</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="halloween_pumpkins" data-category="seasonal">
+                                                <div class="decoration-icon">🎃</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Halloween Pumpkins</div>
+                                                    <div class="decoration-cost">$100</div>
+                                                    <div class="decoration-description">Spooky fall decoration</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="spring_tulips" data-category="seasonal">
+                                                <div class="decoration-icon">🌷</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Spring Tulips</div>
+                                                    <div class="decoration-cost">$70</div>
+                                                    <div class="decoration-description">Fresh spring blooms</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="autumn_wreath" data-category="seasonal">
+                                                <div class="decoration-icon">🍂</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Autumn Wreath</div>
+                                                    <div class="decoration-cost">$60</div>
+                                                    <div class="decoration-description">Warm fall welcome</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="fairy_lanterns" data-category="decoration">
+                                                <div class="decoration-icon">🏮</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Fairy Lanterns</div>
+                                                    <div class="decoration-cost">$90</div>
+                                                    <div class="decoration-description">Soft glowing lights</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="butterfly_arch" data-category="decoration">
+                                                <div class="decoration-icon">🦋</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Butterfly Arch</div>
+                                                    <div class="decoration-cost">$220</div>
+                                                    <div class="decoration-description">Welcoming pollinators</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="crystal_fountain" data-category="statue">
+                                                <div class="decoration-icon">💎</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Crystal Fountain</div>
+                                                    <div class="decoration-cost">$250</div>
+                                                    <div class="decoration-description">Sparkling centerpiece</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="fairy_lights" data-category="decoration">
+                                                <div class="decoration-icon">✨</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Fairy Lights</div>
+                                                    <div class="decoration-cost">$60</div>
+                                                    <div class="decoration-description">Twinkling night ambience</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="blooming_meadow" data-category="flower">
+                                                <div class="decoration-icon">🌼</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Blooming Meadow</div>
+                                                    <div class="decoration-cost">$180</div>
+                                                    <div class="decoration-description">Global +35% growth boost</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="rose_arcade" data-category="flower">
+                                                <div class="decoration-icon">🌹</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Rose Arcade</div>
+                                                    <div class="decoration-cost">$220</div>
+                                                    <div class="decoration-description">Global +30% harvest value</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="hibiscus_sanctuary" data-category="flower">
+                                                <div class="decoration-icon">🌺</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Hibiscus Sanctuary</div>
+                                                    <div class="decoration-cost">$240</div>
+                                                    <div class="decoration-description">Global +25% water efficiency</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="rosette_topiary" data-category="flower">
+                                                <div class="decoration-icon">🏵️</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Rosette Topiary</div>
+                                                    <div class="decoration-cost">$210</div>
+                                                    <div class="decoration-description">Global +25% plant protection</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="bouquet_cart" data-category="flower">
+                                                <div class="decoration-icon">💐</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Bouquet Cart</div>
+                                                    <div class="decoration-cost">$230</div>
+                                                    <div class="decoration-description">Global +20% growth boost</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="lotus_pond" data-category="flower">
+                                                <div class="decoration-icon">🪷</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Lotus Pond</div>
+                                                    <div class="decoration-cost">$300</div>
+                                                    <div class="decoration-description">Global +40% growth aura</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="hyacinth_grove" data-category="flower">
+                                                <div class="decoration-icon">🪻</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Hyacinth Grove</div>
+                                                    <div class="decoration-cost">$250</div>
+                                                    <div class="decoration-description">Global +30% water efficiency</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="white_blossom_circle" data-category="flower">
+                                                <div class="decoration-icon">💮</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">White Blossom Circle</div>
+                                                    <div class="decoration-cost">$200</div>
+                                                    <div class="decoration-description">Global +20% plant protection</div>
+                                                </div>
+                                            </div>
+                                            <div class="decoration-item" data-decoration="eternal_bloom" data-category="flower">
+                                                <div class="decoration-icon">🥀</div>
+                                                <div class="decoration-info">
+                                                    <div class="decoration-name">Eternal Bloom</div>
+                                                    <div class="decoration-cost">$260</div>
+                                                    <div class="decoration-description">Global +25% harvest value</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="tools sidebar-card">
+                        <h3>🛠️ Tools</h3>
+                        <button id="water-btn" class="tool-btn active">
+                            <span>💧</span>
+                            <span>Water</span>
+                            <span class="tool-level">Lv.1</span>
+                        </button>
+                        <button id="fertilizer-btn" class="tool-btn">
+                            <span>🌱</span>
+                            <span>Fertilizer</span>
+                            <span class="tool-level">Lv.1</span>
+                        </button>
+                        <button id="harvest-btn" class="tool-btn">
+                            <span>✂️</span>
+                            <span>Harvest</span>
+                            <span class="tool-level">Lv.1</span>
+                        </button>
+                        <button id="shovel-btn" class="tool-btn">
+                            <span>⛏️</span>
+                            <span>Shovel</span>
+                            <span class="tool-level">Lv.1</span>
+                        </button>
+
+                        <div class="section-heading">
+                            <h4>💧 Sprinkler Tools</h4>
+                            <button class="info-trigger" type="button" aria-label="Sprinkler tool details" aria-controls="tooltip-sprinkler-tools" aria-expanded="false">?</button>
+                        </div>
+                        <div id="tooltip-sprinkler-tools" class="tooltip-card" role="tooltip" hidden>
+                            <ul>
+                                <li>Sprinkler counts show how many are ready to place.</li>
+                                <li>Each sprinkler covers tiles within its range.</li>
+                                <li>Effects stack when ranges overlap for speedy growth.</li>
+                            </ul>
+                        </div>
+                        <button id="sprinkler-basic-btn" class="tool-btn sprinkler-tool">
+                            <span>💧</span>
+                            <span>Basic Sprinkler</span>
+                            <span class="sprinkler-count" id="sprinkler-basic-tool-count">0</span>
+                        </button>
+                        <button id="sprinkler-advanced-btn" class="tool-btn sprinkler-tool">
+                            <span>🌊</span>
+                            <span>Advanced Sprinkler</span>
+                            <span class="sprinkler-count" id="sprinkler-advanced-tool-count">0</span>
+                        </button>
+                        <button id="sprinkler-premium-btn" class="tool-btn sprinkler-tool">
+                            <span>🌈</span>
+                            <span>Premium Sprinkler</span>
+                            <span class="sprinkler-count" id="sprinkler-premium-tool-count">0</span>
+                        </button>
+                        <button id="sprinkler-legendary-btn" class="tool-btn sprinkler-tool">
+                            <span>⭐</span>
+                            <span>Legendary Sprinkler</span>
+                            <span class="sprinkler-count" id="sprinkler-legendary-tool-count">0</span>
+                        </button>
+
+                        <h4>🔧 Upgrade Tools</h4>
+                        <p class="upgrade-helper-text">Curious what the upgrades do? Tap the question mark beside each one.</p>
+                        <div class="upgrade-row">
+                            <button id="upgrade-water-btn" class="upgrade-btn">
+                                <span>💧 Upgrade Water</span>
+                                <span class="upgrade-cost">$50</span>
+                            </button>
+                            <button class="info-trigger" type="button" aria-label="Water upgrade details" aria-controls="tooltip-upgrade-water" aria-expanded="false">?</button>
+                            <div id="tooltip-upgrade-water" class="tooltip-card" role="tooltip" hidden>
+                                <p>Each level reduces watering cooldown by 1 second, grants +20% growth bonus, and adds +10 water capacity.</p>
+                            </div>
+                        </div>
+                        <div class="upgrade-row">
+                            <button id="upgrade-fertilizer-btn" class="upgrade-btn">
+                                <span>🌱 Upgrade Fertilizer</span>
+                                <span class="upgrade-cost">$75</span>
+                            </button>
+                            <button class="info-trigger" type="button" aria-label="Fertilizer upgrade details" aria-controls="tooltip-upgrade-fertilizer" aria-expanded="false">?</button>
+                            <div id="tooltip-upgrade-fertilizer" class="tooltip-card" role="tooltip" hidden>
+                                <p>Each level shortens the cooldown by 1.5 seconds, boosts growth by +30%, and adds +5 fertilizer capacity.</p>
+                            </div>
+                        </div>
+                        <div class="upgrade-row">
+                            <button id="upgrade-shovel-btn" class="upgrade-btn">
+                                <span>⛏️ Upgrade Shovel</span>
+                                <span class="upgrade-cost">$100</span>
+                            </button>
+                            <button class="info-trigger" type="button" aria-label="Shovel upgrade details" aria-controls="tooltip-upgrade-shovel" aria-expanded="false">?</button>
+                            <div id="tooltip-upgrade-shovel" class="tooltip-card" role="tooltip" hidden>
+                                <p>The shovel upgrade is a cosmetic treat that lets you dig in style—no gameplay bonuses here.</p>
+                            </div>
+                        </div>
+                        <div class="upgrade-row">
+                            <button id="upgrade-harvest-btn" class="upgrade-btn">
+                                <span>✂️ Upgrade Harvest</span>
+                                <span class="upgrade-cost">$60</span>
+                            </button>
+                            <button class="info-trigger" type="button" aria-label="Harvest upgrade details" aria-controls="tooltip-upgrade-harvest" aria-expanded="false">?</button>
+                            <div id="tooltip-upgrade-harvest" class="tooltip-card" role="tooltip" hidden>
+                                <p>Harvest upgrades award an extra +10% money bonus per level whenever you collect a fully grown plant.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <section class="sidebar-card prestige-section">
+                        <div class="prestige-header">
+                            <h2 class="sidebar-title">♻️ Prestige Upgrades</h2>
+                            <button type="button" id="prestigeToggle" class="prestige-toggle" aria-expanded="false" aria-controls="prestigePanel" aria-label="Show prestige hub">Show Hub</button>
+                        </div>
+                        <div class="prestige-token-summary" role="status" aria-live="polite">
+                            <div class="token-meta">
+                                <span class="token-icon" aria-hidden="true">💎</span>
+                                <span class="token-label">Tokens</span>
+                            </div>
+                            <span id="rebirthTokenCount" class="token-value">0</span>
+                        </div>
+                        <div id="prestigePanel" class="prestige-panel" hidden>
+                            <div class="prestige-dashboard" aria-live="polite">
+                                <div class="prestige-stat">
+                                    <span class="prestige-stat-label">Current Cycle</span>
+                                    <span id="prestigeCycleCount" class="prestige-stat-value">0</span>
+                                </div>
+                                <div class="prestige-stat">
+                                    <span class="prestige-stat-label">Best Harvest Score</span>
+                                    <span id="prestigeBestScore" class="prestige-stat-value">0</span>
+                                </div>
+                                <div class="prestige-stat">
+                                    <span class="prestige-stat-label">Next Cycle Target</span>
+                                    <span id="prestigeNextTarget" class="prestige-stat-value">0</span>
+                                </div>
+                            </div>
+                            <div id="prestigeCycleSummary" class="prestige-cycle-summary">Cycle 0 · Harvest bonus +0%</div>
+                            <div class="prestige-actions">
+                                <button id="prestigeRebirthShortcut" class="prestige-action-btn" type="button">Start New Cycle</button>
+                                <button id="prestigeRespecBtn" class="prestige-action-btn secondary" type="button">Respec Upgrades</button>
+                            </div>
+                            <div id="prestigeUpgradeList" class="prestige-upgrade-list" aria-live="polite"></div>
+                            <p class="prestige-hint">Rebirth to earn tokens and unlock permanent boosts. Purchased upgrades persist forever.</p>
+                        </div>
+                    </section>
+
+                    <div class="achievements-section sidebar-card">
+                        <h3>🏆 Achievements</h3>
+                        <div id="achievements-list">
+                            <!-- Achievements will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="challenges-section sidebar-card">
+                        <h3>🎯 Garden Challenges</h3>
+                        <div id="challenges-list">
+                            <!-- Challenges will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="stats-section sidebar-card">
+                        <h3>📊 Garden Statistics</h3>
+                        <div id="stats-list">
+                            <!-- Statistics will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="instructions sidebar-card">
+                        <h3>📖 How to Play</h3>
+                        <ul>
+                            <li>Select a seed from the shop</li>
+                            <li>Click on an empty plot to plant</li>
+                            <li>Water your plants to help them grow</li>
+                            <li>Use fertilizer for extra growth boost</li>
+                            <li>Use shovel to remove unwanted plants or sprinklers</li>
+                            <li>Buy and place sprinklers to boost plant growth</li>
+                            <li>Harvest when plants are fully grown</li>
+                            <li>Earn money to buy sprinklers and upgrade tools!</li>
+                        </ul>
+                        <p class="tooltip-reminder">Need upgrade info? Tap the question marks next to tools and sprinklers for cozy tooltips.</p>
+
+                        <h3>🌤️ Weather Effects</h3>
+                        <ul>
+                            <li><strong>Sunny:</strong> Normal growth speed (1.0x)</li>
+                            <li><strong>Rainy:</strong> 50% faster growth (1.5x)</li>
+                            <li><strong>Cloudy:</strong> 20% slower growth (0.8x)</li>
+                            <li><strong>Stormy:</strong> 100% faster growth (2.0x)</li>
+                        </ul>
+
+                        <h3>🌱 Seasonal Effects</h3>
+                        <ul>
+                            <li><strong>Spring:</strong> 20% faster growth (1.2x) - Best for spring crops</li>
+                            <li><strong>Summer:</strong> Normal growth speed (1.0x) - Best for summer crops</li>
+                            <li><strong>Fall:</strong> 20% slower growth (0.8x) - Best for fall crops</li>
+                            <li><strong>Winter:</strong> 40% slower growth (0.6x) - Limited crop availability</li>
+                            <li>Seasons change every 5 real-world days</li>
+                            <li>Some seeds are only available in specific seasons</li>
+                            <li>Year-round seeds can be planted in any season</li>
+                        </ul>
+                    </div>
+                </aside>
+
+                <div class="garden-area">
+                    <div class="garden-title">
+                        <h2 id="gardenTitle" aria-live="polite">Your Garden</h2>
+                    </div>
+                    <div class="season-display" id="seasonDisplay">
+                        <div class="season-info">
+                            <span id="seasonText">🌸 Spring (Day 1)</span>
+                            <span id="growthMultiplier" class="growth-multiplier">Growth: +20%</span>
+                        </div>
+                    </div>
+                    <canvas id="gardenCanvas" width="600" height="600"></canvas>
+                    <button id="toolboxToggle" class="toolbox-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="toolQuickMenu">🧰 Toolbox</button>
+                    <div class="garden-info">
+                        <p>Click on a plot to plant or interact with plants!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div id="adminModal" class="admin-modal">
+        <div class="admin-modal-content">
+            <div class="admin-modal-header">
+                <h2>⚙️ Admin Panel</h2>
+                <button id="closeAdminBtn" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="admin-modal-body">
+                <div class="admin-tabs">
+                    <button class="admin-tab active" data-tab="resources">💰 Resources</button>
+                    <button class="admin-tab" data-tab="shop">🌱 Shop</button>
+
+                    <button class="admin-tab" data-tab="tools">🛠️ Tools</button>
+                    <button class="admin-tab" data-tab="weather">🌤️ Weather</button>
+                    <button class="admin-tab" data-tab="achievements">🏆 Achievements</button>
+                    <button class="admin-tab" data-tab="advanced">⚡ Advanced</button>
+                </div>
+                
+                <!-- Resources Tab -->
+                <div class="admin-tab-content active" id="resources-tab">
+                    <h3>💰 Money & Resources</h3>
+                    <div class="admin-section">
+                        <div class="admin-input-group">
+                            <label>Add Money:</label>
+                            <input type="number" id="addMoneyInput" placeholder="Money to add" min="0">
+                            <button onclick="addMoney()">Add</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Set Money:</label>
+                            <input type="number" id="setMoneyInput" placeholder="Money to set" min="0">
+                            <button onclick="setMoney()">Set</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Add Water:</label>
+                            <input type="number" id="addWaterInput" placeholder="Water to add" min="0">
+                            <button onclick="addWater()">Add</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Set Water:</label>
+                            <input type="number" id="setWaterInput" placeholder="Water to set" min="0">
+                            <button onclick="setWater()">Set</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Add Fertilizer:</label>
+                            <input type="number" id="addFertilizerInput" placeholder="Fertilizer to add" min="0">
+                            <button onclick="addFertilizer()">Add</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Set Fertilizer:</label>
+                            <input type="number" id="setFertilizerInput" placeholder="Fertilizer to set" min="0">
+                            <button onclick="setFertilizer()">Set</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Add Score:</label>
+                            <input type="number" id="addScoreInput" placeholder="Score to add" min="0">
+                            <button onclick="addScore()">Add</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Set Score:</label>
+                            <input type="number" id="setScoreInput" placeholder="Score to set" min="0">
+                            <button onclick="setScore()">Set</button>
+                        </div>
+
+
+                    </div>
+                </div>
+                
+                <!-- Shop Tab -->
+                <div class="admin-tab-content" id="shop-tab">
+                    <h3>🌱 Shop Management</h3>
+                    <div class="admin-section">
+                        <div class="admin-input-group">
+                            <label>Seed Type:</label>
+                            <select id="seedTypeSelect">
+                                <option value="carrot">Carrot</option>
+                                <option value="tomato">Tomato</option>
+                                <option value="corn">Corn</option>
+                                <option value="potato">Potato</option>
+                                <option value="lettuce">Lettuce</option>
+                                <option value="onion">Onion</option>
+                                <option value="garlic">Garlic</option>
+                                <option value="broccoli">Broccoli</option>
+                                <option value="cauliflower">Cauliflower</option>
+                                <option value="cucumber">Cucumber</option>
+                                <option value="radish">Radish</option>
+                                <option value="spinach">Spinach</option>
+                                <option value="zucchini">Zucchini</option>
+                                <option value="peas">Peas</option>
+                                <option value="cabbage">Cabbage</option>
+                                <option value="celery">Celery</option>
+                                <option value="bell_pepper">Bell Pepper</option>
+                                <option value="watermelon">Watermelon</option>
+                                <option value="asparagus">Asparagus</option>
+                                <option value="artichoke">Artichoke</option>
+                                <option value="kiwi">Kiwi</option>
+                                <option value="pumpkin">Pumpkin</option>
+                                <option value="grapes">Grapes</option>
+                                <option value="apple">Apple</option>
+                                <option value="pineapple">Pineapple</option>
+                                <option value="mango">Mango</option>
+                                <option value="dragonfruit">Dragonfruit</option>
+                                <option value="squash">Squash</option>
+                                <option value="winter_greens">Winter Greens</option>
+                                <option value="herbs">Herbs</option>
+                            </select>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Set Stock:</label>
+                            <input type="number" id="setStockInput" placeholder="Stock to set" min="0">
+                            <button onclick="setStock()">Set Stock</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Set Rarity:</label>
+                            <select id="raritySelect">
+                                <option value="common">Common</option>
+                                <option value="rare">Rare</option>
+                                <option value="legendary">Legendary</option>
+                            </select>
+                            <button onclick="setRarity()">Set Rarity</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Restock Interval (minutes):</label>
+                            <input type="number" id="restockTimeInput" placeholder="Minutes" min="1">
+                            <button onclick="setRestockTime()">Set</button>
+                        </div>
+                        <div class="admin-buttons">
+                            <button onclick="restockAll()" class="admin-action-btn">🔄 Restock All</button>
+                        </div>
+                    </div>
+                </div>
+                
+                
+                
+                <!-- Tools Tab -->
+                <div class="admin-tab-content" id="tools-tab">
+                    <h3>🛠️ Tool Management</h3>
+                    <div class="admin-section">
+                        <div class="admin-input-group">
+                            <label>Tool Type:</label>
+                            <select id="toolTypeSelect">
+                                <option value="water">Water</option>
+                                <option value="fertilizer">Fertilizer</option>
+                                <option value="shovel">Shovel</option>
+                                <option value="harvest">Harvest</option>
+                            </select>
+                        </div>
+                        <div class="admin-buttons">
+                            <button onclick="upgradeTool()" class="admin-action-btn">⬆️ Upgrade Tool</button>
+                        </div>
+                        
+                        <h4>💧 Sprinkler Management</h4>
+                        <div class="admin-input-group">
+                            <label>Sprinkler Type:</label>
+                            <select id="sprinklerTypeSelect">
+                                <option value="basic">Basic</option>
+                                <option value="advanced">Advanced</option>
+                                <option value="premium">Premium</option>
+                                <option value="legendary">Legendary</option>
+                            </select>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Add Amount:</label>
+                            <input type="number" id="addSprinklerInput" placeholder="Sprinklers to add" min="0">
+                            <button onclick="addSprinkler()">Add</button>
+                        </div>
+                        <div class="admin-buttons">
+                            <button onclick="clearSprinklers()" class="admin-action-btn">🗑️ Clear Sprinklers</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Weather Tab -->
+                <div class="admin-tab-content" id="weather-tab">
+                    <h3>🌤️ Weather Control</h3>
+                    <div class="admin-section">
+                        <div class="admin-input-group">
+                            <label>Weather Type:</label>
+                            <select id="weatherSelect">
+                                <option value="sunny">Sunny</option>
+                                <option value="rainy">Rainy</option>
+                                <option value="cloudy">Cloudy</option>
+                                <option value="stormy">Stormy</option>
+                            </select>
+                            <button onclick="setWeather()">Set Weather</button>
+                        </div>
+                        <div class="admin-input-group">
+                            <label>Weather Change Interval (minutes):</label>
+                            <input type="number" id="weatherTimeInput" placeholder="Minutes" min="1">
+                            <button onclick="setWeatherTime()">Set</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Achievements Tab -->
+                <div class="admin-tab-content" id="achievements-tab">
+                    <h3>🏆 Achievement Management</h3>
+                    <div class="admin-section">
+                        <div class="admin-input-group">
+                            <label>Achievement:</label>
+                            <select id="achievementSelect">
+                                <option value="firstHarvest">First Harvest</option>
+                                <option value="moneyMaker">Money Maker</option>
+                                <option value="plantMaster">Plant Master</option>
+                                <option value="waterWizard">Water Wizard</option>
+                                <option value="fertilizerFanatic">Fertilizer Fanatic</option>
+                                <option value="speedGrower">Speed Grower</option>
+                                <option value="rareCollector">Rare Collector</option>
+                                <option value="legendaryFarmer">Legendary Farmer</option>
+                            </select>
+                            <button onclick="unlockAchievement()">Unlock</button>
+                        </div>
+                        <div class="admin-buttons">
+                            <button onclick="setScore()" class="admin-action-btn">🎯 Set Score</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Tab -->
+                <div class="admin-tab-content" id="advanced-tab">
+                    <h3>⚡ Advanced Commands</h3>
+                    <div class="admin-section">
+                        <h4>🎯 Challenge Management</h4>
+                        <div class="admin-buttons">
+                            <button onclick="completeAllChallenges()" class="admin-action-btn">✅ Complete All</button>
+                            <button onclick="resetChallenges()" class="admin-action-btn">🔄 Reset Challenges</button>
+                        </div>
+                        
+                        <h4>🌱 Garden Management</h4>
+                        <div class="admin-buttons">
+                            <button onclick="growAllPlants()" class="admin-action-btn">🌱 Grow All Plants</button>
+                            <button onclick="harvestAllPlants()" class="admin-action-btn">✂️ Harvest All</button>
+                            <button onclick="waterAllPlants()" class="admin-action-btn">💧 Water All</button>
+                            <button onclick="fertilizeAllPlants()" class="admin-action-btn">🌿 Fertilize All</button>
+                        </div>
+                        
+                        <h4>📊 Statistics & Data</h4>
+                        <div class="admin-buttons">
+                            <button onclick="resetStats()" class="admin-action-btn">🔄 Reset Stats</button>
+                            <button onclick="showGrowthRates()" class="admin-action-btn">🌱 Show Growth Rates</button>
+                            <button onclick="exportSaveData()" class="admin-action-btn">📤 Export Data</button>
+                            <button onclick="importSaveData()" class="admin-action-btn">📥 Import Data</button>
+                        </div>
+                        
+                        <h4>🎮 Game Control</h4>
+                        <div class="admin-buttons">
+                            <button onclick="setSeason()" class="admin-action-btn">🌱 Set Season</button>
+                        </div>
+                        
+                        <h4>🔧 System</h4>
+                        <div class="admin-buttons">
+                            <button onclick="clearAllSlots()" class="admin-danger-btn">🗑️ Clear All Slots</button>
+                            <button onclick="backupGame()" class="admin-action-btn">💾 Backup</button>
+                            <button onclick="restoreGame()" class="admin-action-btn">📥 Restore</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="admin-modal-footer">
+                <button onclick="saveGame()" class="admin-action-btn">💾 Save</button>
+                <button onclick="clearGarden()" class="admin-danger-btn">🗑️ Clear</button>
+                <button onclick="resetCurrentSlot()" class="admin-danger-btn">🔄 Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="overwriteConfirmModal" class="menu-modal" hidden role="dialog" aria-modal="true" aria-labelledby="overwriteModalTitle" aria-describedby="overwriteModalMessage">
+        <div class="menu-modal__dialog">
+            <h3 class="menu-modal__title" id="overwriteModalTitle">Start New Garden?</h3>
+            <p class="menu-modal__body" id="overwriteModalMessage">
+                <strong id="overwriteSlotLabel">Garden Slot</strong> already has a saved garden. Starting a new one will erase that progress.
+            </p>
+            <p class="menu-modal__note" id="overwriteSlotDetail" hidden></p>
+            <div class="menu-modal__actions">
+                <button type="button" class="menu-modal__btn menu-modal__btn--secondary" id="overwriteCancelBtn">Go Back</button>
+                <button type="button" class="menu-modal__btn menu-modal__btn--danger" id="overwriteConfirmBtn">Start New Garden</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+    <script src="mobile-ui.js"></script>
+</body>
+</html>
+
+
