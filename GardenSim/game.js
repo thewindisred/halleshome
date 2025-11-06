@@ -239,6 +239,11 @@ class GardenGame {
             shovel: 25,
             harvest: 100
         };
+
+        // Base shop prices for essentials (used by dynamic pricing helpers)
+        // Keep these modest; tool levels reduce price via getToolPriceMultiplier()
+        this.waterPriceBase = Number.isFinite(this.waterPriceBase) ? this.waterPriceBase : 5;
+        this.fertilizerPriceBase = Number.isFinite(this.fertilizerPriceBase) ? this.fertilizerPriceBase : 10;
         
         // Tool cooldowns
         this.toolCooldowns = {
@@ -406,7 +411,16 @@ class GardenGame {
     getQuickSeedsList() {
         // Favorites (if any) should appear first in original favorite order
         const allSeeds = Object.keys(this.plantTypes);
-        const available = allSeeds.filter(s => this.isSeedAvailable(s));
+        const hasInventory = this.shopInventory && Object.keys(this.shopInventory).length > 0;
+        const available = allSeeds.filter(s => {
+            if (!this.isSeedAvailable(s)) return false;
+            // Only show seeds that are in stock when inventory is present
+            if (hasInventory) {
+                const inv = this.shopInventory[s];
+                return !!inv && Number(inv.stock) > 0;
+            }
+            return true; // before inventory is ready, allow display
+        });
         const favorites = (this.seedFavorites || []).filter(f => available.includes(f));
 
         // Remaining seeds excluding favorites, sorted by price ascending for discoverability
