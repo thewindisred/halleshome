@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Ambient background canvas (pretty floating particles) -->
+    <canvas id="ambientCanvas" aria-hidden="true"></canvas>
     <!-- Main Menu -->
     <div id="mainMenu" class="main-menu">
         <div class="menu-container">
@@ -132,17 +134,33 @@
 
             <div class="game-content">
                 <aside class="sidebar">
-                    <section class="sidebar-card shop-section">
+                    <!-- Compact quick navigation to reduce scrolling -->
+                    <nav class="sidebar-quicknav" aria-label="Sidebar quick navigation">
+                        <a href="#shopSection" class="quicknav-link">Shop</a>
+                        <a href="#toolsSection" class="quicknav-link">Tools</a>
+                        <a href="#prestigeSection" class="quicknav-link">Prestige</a>
+                        <a href="#achievementsSection" class="quicknav-link">Achievements</a>
+                        <a href="#challengesSection" class="quicknav-link">Challenges</a>
+                        <a href="#statsSection" class="quicknav-link">Stats</a>
+                        <a href="#instructionsSection" class="quicknav-link">Help</a>
+                    </nav>
+                    
+                    <section id="shopSection" class="sidebar-card shop-section">
                         <h2 class="sidebar-title">🌼 Garden Shop</h2>
                         <div class="accordion" id="shopAccordion">
                             <div class="accordion-item">
-                                <button class="accordion-trigger" id="shopSeedsToggle" type="button" aria-expanded="true" aria-controls="shopSeedsPanel">
+                                <button class="accordion-trigger" id="shopSeedsToggle" type="button" aria-expanded="false" aria-controls="shopSeedsPanel">
                                     <span class="trigger-label">🌱 Seeds</span>
                                     <span class="accordion-icon">⌄</span>
                                 </button>
-                                <div id="shopSeedsPanel" class="accordion-panel is-open" role="region" aria-labelledby="shopSeedsToggle">
+                                <div id="shopSeedsPanel" class="accordion-panel" role="region" aria-labelledby="shopSeedsToggle">
                                     <div class="seed-shop">
                                         <h3>🌱 Seed Shop</h3>
+                                        <div class="seed-shop-toolbar">
+                                            <input type="text" id="seedSearchInput" class="seed-search" placeholder="Search seeds..." aria-label="Search seeds by name">
+                                            <button type="button" id="shopCollapseAllBtn" class="collapse-all-btn" aria-label="Collapse all seed categories">Collapse All</button>
+                                            <button type="button" id="shopExpandAllBtn" class="expand-all-btn" aria-label="Expand all seed categories">Expand All</button>
+                                        </div>
                                         <div class="seed-category">
                                             <h4>🥕 Farm Fresh Veggies</h4>
                                             <div class="seed-list">
@@ -554,10 +572,10 @@
                                     <div class="purchase-shop">
                                         <h3>💧 Water &amp; Fertilizer</h3>
                                         <div class="purchase-section">
-                                            <div class="purchase-item">
+                                                <div class="purchase-item">
                                                 <div class="purchase-info">
                                                     <span class="purchase-name">💧 Water</span>
-                                                    <span class="purchase-price">$5</span>
+                                                        <span class="purchase-price" id="waterPriceLabel">$5</span>
                                                     <span class="purchase-description">Water your plants for faster growth</span>
                                                 </div>
                                                 <button class="purchase-btn" onclick="if(window.game) window.game.buyWater()">Buy Water</button>
@@ -565,7 +583,7 @@
                                             <div class="purchase-item">
                                                 <div class="purchase-info">
                                                     <span class="purchase-name">🌱 Fertilizer</span>
-                                                    <span class="purchase-price">$10</span>
+                                                        <span class="purchase-price" id="fertilizerPriceLabel">$10</span>
                                                     <span class="purchase-description">Fertilize your plants for maximum growth</span>
                                                 </div>
                                                 <button class="purchase-btn" onclick="if(window.game) window.game.buyFertilizer()">Buy Fertilizer</button>
@@ -576,7 +594,7 @@
                                             <div class="purchase-item">
                                                 <div class="purchase-info">
                                                     <span class="purchase-name">🌿 Expand Garden</span>
-                                                    <span class="purchase-price">$5000</span>
+                                                    <span id="expandGardenPriceLabel" class="purchase-price">$1500</span>
                                                     <span class="purchase-description">Unlock two extra tiles in every direction.</span>
                                                 </div>
                                                 <button id="expandShopBtn" class="purchase-btn" type="button">🌿 Expand Garden</button>
@@ -864,7 +882,8 @@
                         </div>
                     </section>
 
-                    <div class="tools sidebar-card">
+                    <!-- Tools section (now below Shop) with Upgrades above Sprinklers per request -->
+                    <div id="toolsSection" class="tools sidebar-card">
                         <h3>🛠️ Tools</h3>
                         <button id="water-btn" class="tool-btn active">
                             <span>💧</span>
@@ -885,38 +904,6 @@
                             <span>⛏️</span>
                             <span>Shovel</span>
                             <span class="tool-level">Lv.1</span>
-                        </button>
-
-                        <div class="section-heading">
-                            <h4>💧 Sprinkler Tools</h4>
-                            <button class="info-trigger" type="button" aria-label="Sprinkler tool details" aria-controls="tooltip-sprinkler-tools" aria-expanded="false">?</button>
-                        </div>
-                        <div id="tooltip-sprinkler-tools" class="tooltip-card" role="tooltip" hidden>
-                            <ul>
-                                <li>Sprinkler counts show how many are ready to place.</li>
-                                <li>Each sprinkler covers tiles within its range.</li>
-                                <li>Effects stack when ranges overlap for speedy growth.</li>
-                            </ul>
-                        </div>
-                        <button id="sprinkler-basic-btn" class="tool-btn sprinkler-tool">
-                            <span>💧</span>
-                            <span>Basic Sprinkler</span>
-                            <span class="sprinkler-count" id="sprinkler-basic-tool-count">0</span>
-                        </button>
-                        <button id="sprinkler-advanced-btn" class="tool-btn sprinkler-tool">
-                            <span>🌊</span>
-                            <span>Advanced Sprinkler</span>
-                            <span class="sprinkler-count" id="sprinkler-advanced-tool-count">0</span>
-                        </button>
-                        <button id="sprinkler-premium-btn" class="tool-btn sprinkler-tool">
-                            <span>🌈</span>
-                            <span>Premium Sprinkler</span>
-                            <span class="sprinkler-count" id="sprinkler-premium-tool-count">0</span>
-                        </button>
-                        <button id="sprinkler-legendary-btn" class="tool-btn sprinkler-tool">
-                            <span>⭐</span>
-                            <span>Legendary Sprinkler</span>
-                            <span class="sprinkler-count" id="sprinkler-legendary-tool-count">0</span>
                         </button>
 
                         <h4>🔧 Upgrade Tools</h4>
@@ -961,9 +948,43 @@
                                 <p>Harvest upgrades award an extra +10% money bonus per level whenever you collect a fully grown plant.</p>
                             </div>
                         </div>
+
+                        <div class="section-heading">
+                            <h4>💧 Sprinkler Tools</h4>
+                            <button class="info-trigger" type="button" aria-label="Sprinkler tool details" aria-controls="tooltip-sprinkler-tools" aria-expanded="false">?</button>
+                        </div>
+                        <div id="tooltip-sprinkler-tools" class="tooltip-card" role="tooltip" hidden>
+                            <ul>
+                                <li>Sprinkler counts show how many are ready to place.</li>
+                                <li>Each sprinkler covers tiles within its range.</li>
+                                <li>Effects stack when ranges overlap for speedy growth.</li>
+                            </ul>
+                        </div>
+                        <button id="sprinkler-basic-btn" class="tool-btn sprinkler-tool">
+                            <span>💧</span>
+                            <span>Basic Sprinkler</span>
+                            <span class="sprinkler-count" id="sprinkler-basic-tool-count">0</span>
+                        </button>
+                        <button id="sprinkler-advanced-btn" class="tool-btn sprinkler-tool">
+                            <span>🌊</span>
+                            <span>Advanced Sprinkler</span>
+                            <span class="sprinkler-count" id="sprinkler-advanced-tool-count">0</span>
+                        </button>
+                        <button id="sprinkler-premium-btn" class="tool-btn sprinkler-tool">
+                            <span>🌈</span>
+                            <span>Premium Sprinkler</span>
+                            <span class="sprinkler-count" id="sprinkler-premium-tool-count">0</span>
+                        </button>
+                        <button id="sprinkler-legendary-btn" class="tool-btn sprinkler-tool">
+                            <span>⭐</span>
+                            <span>Legendary Sprinkler</span>
+                            <span class="sprinkler-count" id="sprinkler-legendary-tool-count">0</span>
+                        </button>
                     </div>
 
-                    <section class="sidebar-card prestige-section">
+                    <!-- Tools section moved to the top for compact layout -->
+
+                    <section id="prestigeSection" class="sidebar-card prestige-section">
                         <div class="prestige-header">
                             <h2 class="sidebar-title">♻️ Prestige Upgrades</h2>
                             <button type="button" id="prestigeToggle" class="prestige-toggle" aria-expanded="false" aria-controls="prestigePanel" aria-label="Show prestige hub">Show Hub</button>
@@ -1000,28 +1021,30 @@
                         </div>
                     </section>
 
-                    <div class="achievements-section sidebar-card">
+                    <div id="achievementsSection" class="achievements-section sidebar-card">
                         <h3>🏆 Achievements</h3>
                         <div id="achievements-list">
                             <!-- Achievements will be populated by JavaScript -->
                         </div>
                     </div>
 
-                    <div class="challenges-section sidebar-card">
+                    <div id="challengesSection" class="challenges-section sidebar-card">
                         <h3>🎯 Garden Challenges</h3>
                         <div id="challenges-list">
                             <!-- Challenges will be populated by JavaScript -->
                         </div>
                     </div>
 
-                    <div class="stats-section sidebar-card">
+                    
+
+                    <div id="statsSection" class="stats-section sidebar-card">
                         <h3>📊 Garden Statistics</h3>
                         <div id="stats-list">
                             <!-- Statistics will be populated by JavaScript -->
                         </div>
                     </div>
 
-                    <div class="instructions sidebar-card">
+                    <div id="instructionsSection" class="instructions sidebar-card">
                         <h3>📖 How to Play</h3>
                         <ul>
                             <li>Select a seed from the shop</li>
@@ -1067,10 +1090,36 @@
                         </div>
                     </div>
                     <canvas id="gardenCanvas" width="600" height="600"></canvas>
+                    <!-- Floating bonuses button and popup near the garden -->
+                    <button id="bonusesFab" class="bonuses-fab" type="button" title="Show Active Bonuses" aria-label="Show Active Bonuses" aria-haspopup="dialog" aria-controls="bonusesPopup" aria-expanded="false">+</button>
+                    <div id="bonusesPopup" class="bonuses-popup" role="dialog" aria-modal="false" hidden>
+                        <div class="bonuses-popup-header">
+                            <h3 class="bonuses-popup-title">🌟 Active Bonuses</h3>
+                            <button id="closeBonusesPopup" class="close-btn" type="button" aria-label="Close">&times;</button>
+                        </div>
+                        <div id="bonusesPopupBody" class="bonuses-popup-body">
+                            <!-- Populated by game.js -->
+                        </div>
+                    </div>
                     <button id="toolboxToggle" class="toolbox-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="toolQuickMenu">🧰 Toolbox</button>
                     <div class="garden-info">
                         <p>Click on a plot to plant or interact with plants!</p>
                     </div>
+
+                    <!-- Quick access seed picker to reduce scrolling -->
+                    <div id="quickSeedsBar" class="quick-seeds" aria-label="Quick Seeds">
+                        <div class="qs-header">
+                            <span class="qs-title">🌱 Quick Seeds</span>
+                            <div class="qs-actions">
+                                <button id="qsCollapseBtn" class="qs-collapse" type="button" aria-expanded="true" aria-controls="qsList" title="Collapse">−</button>
+                            </div>
+                        </div>
+                        <div id="qsList" class="qs-list" role="list"></div>
+                        <div class="qs-hint">Tip: Press 1–9 to quick-select seeds</div>
+                    </div>
+
+                    <!-- Space under the garden we can use for secondary panels on desktop -->
+                    <div id="underGarden" class="under-garden" aria-live="polite"></div>
                 </div>
             </div>
         </div>
@@ -1360,6 +1409,73 @@
 
     <script src="game.js"></script>
     <script src="mobile-ui.js"></script>
+    <script src="ambient.js"></script>
+            <!-- Landscape recommendation overlay -->
+            <div id="rotateOverlay" class="rotate-overlay" aria-live="polite" aria-hidden="true">
+                <div class="rotate-card">
+                    <div class="icon" aria-hidden="true">🔁</div>
+                    <h2 style="margin:0">Best played in landscape</h2>
+                    <p>Rotate your device to enjoy a bigger garden. On some Android devices we can also switch to fullscreen and lock the screen to landscape.</p>
+                    <div class="rotate-actions">
+                        <button id="enterFullscreenBtn" type="button">Play fullscreen (landscape)</button>
+                        <button id="playPortraitBtn" type="button">Play in portrait anyway</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                // Simple orientation helper with graceful fallbacks
+                (function() {
+                    const overlay = document.getElementById('rotateOverlay');
+                    const fsBtn = document.getElementById('enterFullscreenBtn');
+                    const skipBtn = document.getElementById('playPortraitBtn');
+                    const MIN_WIDTH_FOR_OVERLAY = 900; // tablets and bigger skip overlay
+                    let userSkipped = false;
+
+                    function shouldShowOverlay() {
+                        const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+                        if (userSkipped) return false;
+                        if (window.innerWidth >= MIN_WIDTH_FOR_OVERLAY) return false;
+                        return isPortrait;
+                    }
+
+                    function updateOverlay() {
+                        const show = shouldShowOverlay();
+                        overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+                        overlay.style.display = show ? 'flex' : 'none';
+                    }
+
+                    async function enterFullscreenAndLockLandscape() {
+                        try {
+                            const el = document.documentElement;
+                            if (el.requestFullscreen) {
+                                await el.requestFullscreen();
+                            }
+                            if (screen.orientation && screen.orientation.lock) {
+                                try {
+                                    await screen.orientation.lock('landscape');
+                                } catch (err) {
+                                    // iOS Safari and some browsers don't allow locking; ignore
+                                }
+                            }
+                        } catch (e) {
+                            // Ignore failures—user can still rotate manually
+                        } finally {
+                            userSkipped = true;
+                            updateOverlay();
+                        }
+                    }
+
+                    fsBtn?.addEventListener('click', () => enterFullscreenAndLockLandscape());
+                    skipBtn?.addEventListener('click', () => { userSkipped = true; updateOverlay(); });
+
+                    window.addEventListener('resize', updateOverlay);
+                    window.addEventListener('orientationchange', updateOverlay);
+                    document.addEventListener('fullscreenchange', updateOverlay);
+                    // Initial check
+                    updateOverlay();
+                })();
+            </script>
 </body>
 </html>
 

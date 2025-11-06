@@ -113,6 +113,17 @@ class GardenGame {
             { id: 'shovel', label: 'Shovel', icon: '⛏️' }
         ];
 
+        // Cached canvas patterns/textures for grass tiles
+        this.grassPatternCache = {}; // Cache by tile size for crisp pixel-art
+        this.grassWorldScale = null;
+
+        // External per-cell tile texture (user-provided PNG)
+        // The file exists at Coding Shit/Halle10Months/src/GRASS+.png
+        this.tileTexturePath = '../src/GRASS+.png';
+        this.tileTextureImage = null;
+        this.tileTextureLoaded = false;
+        this._tileTextureAttempted = false;
+
         // Alert message state
         this.messageContainer = null;
         this.activeMessages = [];
@@ -224,7 +235,7 @@ class GardenGame {
         
         this.toolUpgradeCosts = {
             water: 50,
-            fertilizer: 75,
+            fertilizer: 300, // Fertilizer upgrades are now much more expensive
             shovel: 25,
             harvest: 100
         };
@@ -315,6 +326,17 @@ class GardenGame {
         this.rareRestockChance = 0.25; // 25% chance for rare seeds
         this.legendaryRestockChance = 0.12; // 12% chance for legendary seeds
         
+    // Softlock relief cadence and cap (guarantee blessing within 10–30s when softlocked)
+    this.softlockCheckInterval = 10 * 1000; // every 10 seconds
+    this.lastSoftlockCheck = Date.now();
+    this.softlockMissCounter = 0; // counts consecutive eligible checks without blessing
+
+    // Passive growth tuning
+    this.passiveGrowthEnabled = true; // Allow slow growth without boosters
+    this.passiveGrowthBaseMs = 60 * 1000; // Base: ~1 minute per stage (before multipliers)
+    this.passiveIgnoreSeedMultiplier = true; // Universal rate across plants
+    this.passiveIgnoreEnvMultipliers = true; // Ignore weather/season for passive growth
+        
 
         
         // Only load game and initialize UI if we have a canvas (not for background processing)
@@ -323,6 +345,12 @@ class GardenGame {
             this.initializeEventListeners();
             this.initializeHoverTooltip();
             this.initializeAdminPanel();
+            // Quick Seeds bar near the garden
+            this.initializeQuickSeedsBar();
+            // Bonuses UI and responsive layout around the garden
+            this.initializeBonusesUI();
+            this.setupResponsiveLayout();
+            // Single pass UI initialization (removed duplicate calls)
             this.updateUI();
             this.updateToolDisplay();
             this.updateSprinklerDisplay();
@@ -332,6 +360,155 @@ class GardenGame {
         
         // Initialize challenges
         this.generateChallenges();
+    }
+    
+    initializeQuickSeedsBar() {
+        this.seedRecent = Array.isArray(this.seedRecent) ? this.seedRecent : [];
+
+        const qs = document.getElementById('quickSeedsBar');
+        const qsList = document.getElementById('qsList');
+        if (!qs || !qsList) return;
+
+        const collapseBtn = document.getElementById('qsCollapseBtn');
+        collapseBtn?.addEventListener('click', () => {
+            const list = document.getElementById('qsList');
+            if (!list) return;
+            const expanded = collapseBtn.getAttribute('aria-expanded') !== 'false';
+            if (expanded) {
+                list.style.display = 'none';
+                collapseBtn.textContent = '+';
+                collapseBtn.setAttribute('aria-expanded', 'false');
+            } else {
+                list.style.display = 'grid';
+                collapseBtn.textContent = '−';
+                collapseBtn.setAttribute('aria-expanded', 'true');
+            }
+        });
+
+        // Keyboard: 1–9 select visible seeds; F toggles favorite for selected seed
+        document.addEventListener('keydown', (e) => {
+            if (!this.canvas) return;
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+            if (e.key >= '1' && e.key <= '9') {
+                const idx = Number(e.key) - 1;
+                const items = Array.from(document.querySelectorAll('#qsList .qs-item'));
+                const target = items[idx];
+                if (target) {
+                    const seed = target.getAttribute('data-seed');
+                    if (seed) this.selectSeed(seed);
+                }
+            }
+        });
+
+        this.updateQuickSeedsBar();
+    }
+
+    getQuickSeedsList() {
+        // Favorites (if any) should appear first in original favorite order
+        const allSeeds = Object.keys(this.plantTypes);
+        const available = allSeeds.filter(s => this.isSeedAvailable(s));
+        const favorites = (this.seedFavorites || []).filter(f => available.includes(f));
+
+        // Remaining seeds excluding favorites, sorted by price ascending for discoverability
+        const remaining = available.filter(s => !favorites.includes(s));
+        const priced = remaining.map(s => ({ id: s, price: this.plantTypes[s]?.cost || 0 }));
+        priced.sort((a, b) => (a.price || 0) - (b.price || 0));
+
+        const ordered = [...favorites, ...priced.map(p => p.id)];
+        return ordered.slice(0, 18);
+    }
+
+    updateQuickSeedsBar() {
+        const qsList = document.getElementById('qsList');
+        if (!qsList) return;
+        const seeds = this.getQuickSeedsList();
+        const html = seeds.map((seed) => {
+            const plant = this.plantTypes[seed];
+            const selected = this.selectedSeed === seed ? ' is-selected' : '';
+            const isFav = (this.seedFavorites||[]).includes(seed);
+            return `
+                <button class="qs-item${selected}" type="button" data-seed="${seed}" role="listitem" aria-pressed="${this.selectedSeed === seed ? 'true' : 'false'}" title="${plant.name} ($${plant.cost})">
+                    <span class="qs-icon">${plant.stages?.[2] || '🌱'}</span>
+                    <span class="qs-name">${plant.name}</span>
+                    <span class="qs-meta">$${plant.cost}</span>
+                    <span class="qs-fav" data-fav="${isFav ? '1' : '0'}" aria-label="${isFav ? 'Unfavorite' : 'Favorite'} seed">${isFav ? '⭐' : '☆'}</span>
+                </button>
+            `;
+        }).join('');
+        qsList.innerHTML = html || '<div class="qs-empty">No seeds available right now.</div>';
+        
+        // Direct binding on buttons (defensive against any overlay/scroll quirks)
+        const btns = qsList.querySelectorAll('.qs-item');
+        btns.forEach((btn) => {
+            btn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                // Favorite toggle if star clicked
+                const favEl = ev.target.closest('.qs-fav');
+                if (favEl) {
+                    const seed = btn.getAttribute('data-seed');
+                    if (seed) this.toggleFavoriteSeed(seed);
+                    return;
+                }
+                const seed = btn.getAttribute('data-seed');
+                if (!seed) return;
+                this.selectSeed(seed);
+                this.seedRecent = [seed, ...(this.seedRecent||[]).filter(s => s!==seed)].slice(0, 8);
+                this.saveGame();
+                this.updateQuickSeedsBar();
+            }, { once: true });
+        });
+        
+        // Use event delegation for robust handling
+        if (!qsList._qsDelegated) {
+            qsList.addEventListener('click', (e) => {
+                // Normalize target to an Element (Text nodes don't have .closest)
+                const t = e.target && e.target.nodeType === 1 ? e.target : (e.target && e.target.parentElement ? e.target.parentElement : null);
+                if (!t) return;
+                const item = t.closest('.qs-item');
+                if (item && qsList.contains(item)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const seed = item.getAttribute('data-seed');
+                    if (!seed) return;
+                    const favEl = e.target && e.target.closest && e.target.closest('.qs-fav');
+                    if (favEl) {
+                        this.toggleFavoriteSeed(seed);
+                        return;
+                    }
+                    this.selectSeed(seed);
+                    this.seedRecent = [seed, ...(this.seedRecent||[]).filter(s => s!==seed)].slice(0, 8);
+                    this.saveGame();
+                    this.updateQuickSeedsBar();
+                }
+            });
+            // Mark to avoid attaching multiple times
+            qsList._qsDelegated = true;
+        }
+    }
+
+    toggleFavoriteSeed(seed) {
+        this.seedFavorites = Array.isArray(this.seedFavorites) ? this.seedFavorites : [];
+        const i = this.seedFavorites.indexOf(seed);
+        if (i >= 0) this.seedFavorites.splice(i, 1); else this.seedFavorites.unshift(seed);
+        this.seedFavorites = Array.from(new Set(this.seedFavorites)).slice(0, 20);
+        this.saveGame();
+        this.updateQuickSeedsBar();
+        this.refreshSeedItemsFavoriteIndicators();
+    }
+
+    refreshSeedItemsFavoriteIndicators() {
+        const favoritesSet = new Set(this.seedFavorites || []);
+        document.querySelectorAll('.seed-item').forEach(el => {
+            const seed = el.getAttribute('data-seed');
+            if (!seed) return;
+            let favBtn = el.querySelector('.favorite-btn');
+            if (!favBtn) return; // created elsewhere
+            const isFav = favoritesSet.has(seed);
+            favBtn.textContent = isFav ? '⭐' : '☆';
+            favBtn.setAttribute('aria-label', isFav ? `Unfavorite ${seed}` : `Favorite ${seed}`);
+            favBtn.dataset.fav = isFav ? '1' : '0';
+        });
     }
     
     // ===== SEASONAL SYSTEM =====
@@ -496,6 +673,8 @@ class GardenGame {
             this.hoverTooltip.classList.remove('is-visible');
             this.hoverTooltip.setAttribute('aria-hidden', 'true');
         }
+        // Stop live tooltip updates
+        this.stopTooltipProgressUpdater();
         this.currentHoverKey = null;
     }
 
@@ -690,14 +869,31 @@ class GardenGame {
                 ? `<div class="garden-tooltip__status">${statusLabels.join(' & ')}</div>`
                 : '';
 
+            // Compute overall progress toward full maturity (0..1)
+            const overallProgress = this.getPlantOverallProgress(row, col);
+            const percent = Math.max(0, Math.min(100, Math.round(overallProgress * 100)));
+
+            const progressMarkup = `
+                <div class="garden-tooltip__progress" aria-label="Growth Progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}">
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width:${percent}%"></div>
+                    </div>
+                    <div class="progress-label">${percent}% to full growth</div>
+                </div>
+            `;
+
             const plantLines = [
                 `<div class="garden-tooltip__name">${plantData.name}</div>`,
                 `<div class="garden-tooltip__meta">${stageLabel}</div>`,
+                progressMarkup,
                 statusLine,
                 `<div class="garden-tooltip__value">Harvest Price: $${harvestValue.toLocaleString()}</div>`
             ];
             tooltipContent = plantLines.filter(Boolean).join('');
+            // Start live progress updates while tooltip is visible
+            this.startTooltipProgressUpdater(row, col);
         } else if (cell.decoration) {
+            this.stopTooltipProgressUpdater();
             const decorationType = typeof cell.decoration === 'string' ? cell.decoration : cell.decoration.type;
             const decorationState = typeof cell.decoration === 'object' ? cell.decoration : { type: decorationType };
             const decorationData = this.decorations[decorationType];
@@ -741,6 +937,7 @@ class GardenGame {
                 bonuses.length ? `<div class="garden-tooltip__note">${bonuses.join(' · ')}</div>` : ''
             ];
             tooltipContent = sprinklerLines.filter(Boolean).join('');
+            this.stopTooltipProgressUpdater();
         } else {
             this.hideGardenTooltip();
             return;
@@ -757,6 +954,113 @@ class GardenGame {
             this.currentHoverKey = tooltipKey;
             this.showGardenTooltip(tooltipContent, pointerX, pointerY);
         }
+    }
+
+    startTooltipProgressUpdater(row, col) {
+        try {
+            if (!this.hoverTooltip) return;
+            this.tooltipProgressCell = { row, col };
+            if (this.tooltipProgressTimer) return; // already running
+            this.tooltipProgressTimer = setInterval(() => {
+                if (!this.hoverTooltip || !this.hoverTooltip.classList.contains('is-visible')) {
+                    this.stopTooltipProgressUpdater();
+                    return;
+                }
+                const cellRef = this.tooltipProgressCell;
+                if (!cellRef) return;
+                const progressWrap = this.hoverTooltip.querySelector('.garden-tooltip__progress');
+                if (!progressWrap) return;
+                const fillEl = progressWrap.querySelector('.progress-fill');
+                const labelEl = progressWrap.querySelector('.progress-label');
+                const barEl = progressWrap;
+                const value = Math.round(Math.max(0, Math.min(100, this.getPlantOverallProgress(cellRef.row, cellRef.col) * 100)));
+                if (fillEl) fillEl.style.width = value + '%';
+                if (labelEl) labelEl.textContent = `${value}% to full growth`;
+                if (barEl) barEl.setAttribute('aria-valuenow', String(value));
+            }, 200);
+        } catch (e) {
+            // fail safe: stop timer on error
+            this.stopTooltipProgressUpdater();
+        }
+    }
+
+    stopTooltipProgressUpdater() {
+        if (this.tooltipProgressTimer) {
+            clearInterval(this.tooltipProgressTimer);
+            this.tooltipProgressTimer = null;
+        }
+        this.tooltipProgressCell = null;
+    }
+
+    // Compute 0..1 overall growth progress including fractional stage progress when possible
+    getPlantOverallProgress(row, col) {
+        const cell = this.garden?.[row]?.[col];
+        if (!cell || !cell.plant) return 0;
+        const totalStages = Math.max(1, this.growthStages.length);
+        const maxIndex = totalStages - 1;
+        const stageIndex = Math.min(Math.max(this.getPlantGrowthStage(cell.plant), 0), maxIndex);
+        if (cell.plant.isFullyGrown || stageIndex >= maxIndex) return 1;
+
+        const now = Date.now();
+        let fractional = 0;
+
+        // Try to infer fractional progress from the active growth mode
+        // 1) Watered window
+        if (cell.watered && cell.waterGrowthStart && cell.waterGrowthDuration && (now - cell.waterGrowthStart) < cell.waterGrowthDuration) {
+            let growthTimePerStage = 2000; // base per water
+            const seedType = cell.plant.type;
+            if (!this.passiveIgnoreSeedMultiplier) {
+                growthTimePerStage *= this.getSeedGrowthMultiplier(seedType);
+            } else {
+                // keep water growth as-is with seed multipliers – it's an active boost
+                growthTimePerStage *= this.getSeedGrowthMultiplier(seedType);
+            }
+            const decorationGrowthBonus = (cell.plant.bonuses?.growth || 0) / 100;
+            if (decorationGrowthBonus > 0) growthTimePerStage /= (1 + decorationGrowthBonus);
+            const last = cell.lastWaterGrowthCheck || cell.waterGrowthStart;
+            fractional = Math.max(0, Math.min(1, (now - last) / growthTimePerStage));
+        }
+        // 2) Fertilized window
+        else if (cell.fertilized && cell.fertilizerGrowthStart && cell.fertilizerGrowthDuration && (now - cell.fertilizerGrowthStart) < cell.fertilizerGrowthDuration) {
+            let growthTimePerStage = 1500; // base per fertilizer
+            const seedType = cell.plant.type;
+            growthTimePerStage *= this.getSeedGrowthMultiplier(seedType);
+            const decorationGrowthBonus = (cell.plant.bonuses?.growth || 0) / 100;
+            if (decorationGrowthBonus > 0) growthTimePerStage /= (1 + decorationGrowthBonus);
+            const last = cell.lastFertilizerGrowthCheck || cell.fertilizerGrowthStart;
+            fractional = Math.max(0, Math.min(1, (now - last) / growthTimePerStage));
+        }
+        // 3) Sprinkler growth (if in range)
+        else {
+            const sprinklerBonus = this.getSprinklerBonus(row, col);
+            if (sprinklerBonus > 0 && cell.lastSprinklerGrowth) {
+                let growthTimePerStage = 30000 / (1 + sprinklerBonus);
+                const seedType = cell.plant.type;
+                growthTimePerStage *= this.getSeedGrowthMultiplier(seedType);
+                const decorationGrowthBonus = (cell.plant.bonuses?.growth || 0) / 100;
+                if (decorationGrowthBonus > 0) growthTimePerStage /= (1 + decorationGrowthBonus);
+                fractional = Math.max(0, Math.min(1, (now - cell.lastSprinklerGrowth) / growthTimePerStage));
+            }
+            // 4) Passive growth fallback
+            else if (this.passiveGrowthEnabled) {
+                let growthTimePerStage = Number.isFinite(this.passiveGrowthBaseMs) && this.passiveGrowthBaseMs > 0 ? this.passiveGrowthBaseMs : 60000;
+                if (!this.passiveIgnoreSeedMultiplier) {
+                    const seedType = cell.plant.type;
+                    growthTimePerStage *= this.getSeedGrowthMultiplier(seedType);
+                }
+                if (!this.passiveIgnoreEnvMultipliers) {
+                    const weatherMult = (this.weatherEffects[this.weather]?.growthMultiplier) || 1.0;
+                    const seasonMult = this.seasonMultiplier || 1.0;
+                    growthTimePerStage /= weatherMult;
+                    growthTimePerStage /= seasonMult;
+                }
+                const anchor = cell.lastPassiveGrowth || cell.plantedAt || cell.plant.plantedAt || now;
+                fractional = Math.max(0, Math.min(1, (now - anchor) / growthTimePerStage));
+            }
+        }
+
+        const overall = (stageIndex + Math.max(0, Math.min(1, fractional))) / maxIndex;
+        return Math.max(0, Math.min(1, overall));
     }
 
     getPointerPosition(event) {
@@ -825,7 +1129,8 @@ class GardenGame {
     
     // ===== GARDEN EXPANSION =====
     expandGarden() {
-        if (this.gardenSize >= this.maxGardenSize) {
+        const oldSize = this.gardenSize;
+        if (oldSize >= this.maxGardenSize) {
             this.showMessage('Garden is already at maximum size!', 'error');
             return false;
         }
@@ -836,31 +1141,46 @@ class GardenGame {
         }
         
         this.money -= this.expansionCost;
-        this.gardenSize++;
-        this.gridSize = this.gardenSize;
-        this.cellSize = Math.floor(600 / this.gridSize);
+        // Expand by two tiles on every side (total +4 per dimension), but cap at maxGardenSize
+        const proposed = oldSize + 4;
+        const newSize = Math.min(this.maxGardenSize, proposed);
+        this.gardenSize = newSize;
+        this.gridSize = newSize;
         
-        // Expand the garden array while preserving existing plants
+        // Expand the garden array while preserving existing plants, centered in the new grid
         const oldGarden = this.garden;
         this.garden = this.initializeGarden();
-        
-        // Copy existing plants and decorations to the new garden
-        for (let row = 0; row < oldGarden.length; row++) {
-            for (let col = 0; col < oldGarden[row].length; col++) {
-                if (oldGarden[row][col].plant || oldGarden[row][col].decoration) {
-                    this.garden[row][col] = {
-                        plant: oldGarden[row][col].plant,
-                        decoration: oldGarden[row][col].decoration,
-                        watered: oldGarden[row][col].watered,
-                        wateredAt: oldGarden[row][col].wateredAt,
-                        waterCooldown: oldGarden[row][col].waterCooldown,
-                        fertilized: oldGarden[row][col].fertilized,
-                        fertilizedAt: oldGarden[row][col].fertilizedAt,
-                        fertilizerCooldown: oldGarden[row][col].fertilizerCooldown,
-                        plantedAt: oldGarden[row][col].plantedAt
+        const delta = newSize - oldSize;
+        const offset = Math.floor(delta / 2);
+        for (let row = 0; row < oldSize; row++) {
+            for (let col = 0; col < oldSize; col++) {
+                const src = oldGarden[row][col];
+                if (!src) continue;
+                const dstRow = row + offset;
+                const dstCol = col + offset;
+                if (dstRow >= 0 && dstRow < newSize && dstCol >= 0 && dstCol < newSize) {
+                    this.garden[dstRow][dstCol] = {
+                        plant: src.plant,
+                        decoration: src.decoration,
+                        watered: src.watered,
+                        wateredAt: src.wateredAt,
+                        waterCooldown: src.waterCooldown,
+                        fertilized: src.fertilized,
+                        fertilizedAt: src.fertilizedAt,
+                        fertilizerCooldown: src.fertilizerCooldown,
+                        plantedAt: src.plantedAt
                     };
                 }
             }
+        }
+
+        // Shift existing sprinkler coordinates so the layout grows in all directions evenly
+        if (Array.isArray(this.sprinklers) && this.sprinklers.length) {
+            this.sprinklers = this.sprinklers.map(s => ({
+                ...s,
+                row: Math.min(newSize - 1, Math.max(0, s.row + offset)),
+                col: Math.min(newSize - 1, Math.max(0, s.col + offset))
+            }));
         }
         
         // Update expansion cost for next expansion
@@ -869,8 +1189,11 @@ class GardenGame {
         // Update expansion challenge progress
         this.updateChallengeProgress('expansion', 1);
         
+        // Resize canvas and cell size to tightly fit the new grid without large borders
+        this.adjustCanvasForMobile();
         this.showMessage(`Garden expanded to ${this.gardenSize}x${this.gardenSize}!`, 'success');
         this.updateUI();
+        this.draw();
         this.saveGame();
         return true;
     }
@@ -1075,9 +1398,84 @@ class GardenGame {
             scale: 1 + Math.random() * 0.5 // Random size variation
         });
     }
+
+    // Apply all currently placed global decoration bonuses to a specific cell's plant
+    applyAllGlobalBonusesToCell(row, col) {
+        const cell = this.garden?.[row]?.[col];
+        if (!cell || !cell.plant) return;
+        for (let y = 0; y < this.gridSize; y++) {
+            for (let x = 0; x < this.gridSize; x++) {
+                const deco = this.garden?.[y]?.[x]?.decoration;
+                if (!deco) continue;
+                const data = this.decorations?.[deco.type];
+                if (!data || data.bonus === 'none') continue;
+                if (data.scope === 'global') {
+                    this.applyPlantBonus(row, col, data.bonus);
+                }
+            }
+        }
+    }
+
+    // Gentle, soft particle burst for subtle, round feedback at (x, y)
+    // kind: 'plant' | 'water' | 'fertilizer' | 'harvest' | 'sprinkler' | 'decoration' | 'remove'
+    // count: small number of dots to spawn
+    spawnGentleBurst(x, y, kind = 'plant', count = 12) {
+        const palette = this.getBurstPalette(kind);
+        // Cap count for mobile and when particle buffer is large
+        const maxParticles = this.isMobileDevice ? 120 : 250;
+        if (Array.isArray(this.particles) && this.particles.length > maxParticles) {
+            return; // avoid overdraw on mobile/low-end
+        }
+        const capped = this.isMobileDevice ? Math.min(count, 8) : count;
+        for (let i = 0; i < capped; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 1.2 + Math.random() * 1.8; // higher velocity outward
+            const life = 50 + Math.floor(Math.random() * 20); // 50–70 frames
+            const radius = (this.isMobileDevice ? 1.4 : 1.8) + Math.random() * (this.isMobileDevice ? 1.6 : 2.2); // smaller on mobile
+            const color = palette[(Math.random() * palette.length) | 0];
+            this.particles.push({
+                x,
+                y,
+                type: 'soft',
+                life,
+                maxLife: life,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                ax: 0,
+                ay: 0.01, // a hint of floaty drift
+                radius,
+                color,
+                softness: this.isMobileDevice ? (4 + Math.random() * 6) : (10 + Math.random() * 10)
+            });
+        }
+    }
+
+    // Pastel palettes per interaction kind
+    getBurstPalette(kind) {
+        switch (kind) {
+            case 'water':
+                return ['#7EC8E3', '#9ED9F5', '#B3E5FC'];
+            case 'fertilizer':
+                return ['#99D98C', '#B5E48C', '#A7D47D'];
+            case 'harvest':
+                return ['#FFD166', '#FFE08A', '#FFECB3'];
+            case 'sprinkler':
+                return ['#4895EF', '#4CC9F0', '#90E0EF'];
+            case 'decoration':
+                return ['#F7A8B8', '#FFCCD5', '#FFC4E1'];
+            case 'remove':
+                return ['#C7BEB3', '#A68A64', '#B8A89A'];
+            case 'plant':
+            default:
+                return ['#7ED957', '#A1E89B', '#C6F6C8'];
+        }
+    }
     
     updateParticles() {
         this.particles = this.particles.filter(particle => {
+            // basic physics
+            if (typeof particle.ax === 'number') particle.vx += particle.ax;
+            if (typeof particle.ay === 'number') particle.vy += particle.ay;
             particle.x += particle.vx;
             particle.y += particle.vy;
             particle.life--;
@@ -1095,6 +1493,28 @@ class GardenGame {
             
             // Different colors and styles for different particle types
             switch (particle.type) {
+                case 'soft': {
+                    // soft pastel dots, more opaque and higher velocity already handled
+                    const r = particle.radius || 2.5;
+                    const color = particle.color || '#ffffff';
+                    // Use normal compositing for a more solid look
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    // Force near-opaque alpha to reduce translucency
+                    this.ctx.globalAlpha = 0.95;
+                    this.ctx.fillStyle = color;
+                    // Reduce or remove heavy blur on mobile to improve perf
+                    if (this.isMobileDevice) {
+                        this.ctx.shadowColor = 'transparent';
+                        this.ctx.shadowBlur = 0;
+                    } else {
+                        this.ctx.shadowColor = color;
+                        this.ctx.shadowBlur = Math.max(4, (particle.softness || 12) * 0.5);
+                    }
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, r, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    break;
+                }
                 case 'money':
                     this.ctx.fillStyle = '#FFD700';
                     this.ctx.strokeStyle = '#FFA500';
@@ -1485,11 +1905,33 @@ class GardenGame {
         addBtnListener(window, 'resize', () => this.hideToolQuickMenu());
 
         // Seed selection
+        // Enhance seed items with favorite buttons and selection behavior
+        this.enhanceSeedItems();
         document.querySelectorAll('.seed-item').forEach(item => {
-            addBtnListener(item, 'click', () => {
+            addBtnListener(item, 'click', (e) => {
+                if (e && e.target && (e.target.classList.contains('favorite-btn') || e.target.closest('.favorite-btn'))) {
+                    return; // handled by favorite button
+                }
                 this.selectSeed(item.dataset.seed);
             });
         });
+
+        // Seed search and shop controls
+        const seedSearchInput = document.getElementById('seedSearchInput');
+        if (seedSearchInput) {
+            addBtnListener(seedSearchInput, 'input', (e) => {
+                const q = (e.target && e.target.value) || '';
+                this.filterSeeds(q);
+            });
+        }
+        const collapseAllBtn = document.getElementById('shopCollapseAllBtn');
+        const expandAllBtn = document.getElementById('shopExpandAllBtn');
+        if (collapseAllBtn) {
+            addBtnListener(collapseAllBtn, 'click', () => this.setAllShopAccordions(false));
+        }
+        if (expandAllBtn) {
+            addBtnListener(expandAllBtn, 'click', () => this.setAllShopAccordions(true));
+        }
 
         if (this.toolboxButton) {
             addBtnListener(this.toolboxButton, 'click', (event) => {
@@ -1582,16 +2024,319 @@ class GardenGame {
         }, 1000);
 
         this.initializeHoverTooltip();
+        // Ensure bonuses UI listeners are bound after DOM is ready
+        this.initializeBonusesUI();
+    }
+
+    enhanceSeedItems() {
+        // Add a small favorite toggle button to each seed item if missing
+        const favoritesSet = new Set(this.seedFavorites || []);
+        document.querySelectorAll('.seed-item').forEach((el) => {
+            if (el.querySelector('.favorite-btn')) return;
+            const seed = el.getAttribute('data-seed');
+            if (!seed) return;
+            const fav = document.createElement('button');
+            const isFav = favoritesSet.has(seed);
+            fav.type = 'button';
+            fav.className = 'favorite-btn';
+            fav.dataset.fav = isFav ? '1' : '0';
+            fav.setAttribute('aria-label', isFav ? `Unfavorite ${seed}` : `Favorite ${seed}`);
+            fav.title = isFav ? 'Unfavorite' : 'Favorite';
+            fav.textContent = isFav ? '⭐' : '☆';
+            fav.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleFavoriteSeed(seed);
+                // labels updated by toggleFavoriteSeed -> refreshSeedItemsFavoriteIndicators
+            });
+            // Place the star at the end of the item
+            el.appendChild(fav);
+        });
+    }
+
+    setAllShopAccordions(expand) {
+        try {
+            const accordions = Array.from(document.querySelectorAll('#shopAccordion .accordion-item > .accordion-trigger'));
+            accordions.forEach(btn => {
+                const id = btn.getAttribute('aria-controls');
+                const panel = id ? document.getElementById(id) : null;
+                if (!panel) return;
+                const shouldExpand = !!expand;
+                btn.setAttribute('aria-expanded', shouldExpand ? 'true' : 'false');
+                panel.classList.toggle('is-open', shouldExpand);
+                panel.setAttribute('aria-hidden', shouldExpand ? 'false' : 'true');
+                if (shouldExpand) {
+                    panel.removeAttribute('hidden');
+                } else {
+                    panel.setAttribute('hidden', '');
+                }
+            });
+        } catch (e) {
+            // no-op
+        }
+    }
+
+    filterSeeds(query) {
+        try {
+            const q = (query || '').toString().trim().toLowerCase();
+            const items = Array.from(document.querySelectorAll('.seed-shop .seed-item'));
+            const cats = Array.from(document.querySelectorAll('.seed-shop .seed-category'));
+            items.forEach(item => {
+                const nameEl = item.querySelector('.seed-name');
+                const name = (nameEl?.textContent || item.getAttribute('data-seed') || '').toLowerCase();
+                const match = !q || name.includes(q);
+                item.style.display = match ? '' : 'none';
+            });
+            // Hide categories with no visible items
+            cats.forEach(cat => {
+                const visible = cat.querySelector('.seed-item[style*="display: none"]') ?
+                    Array.from(cat.querySelectorAll('.seed-item')).some(x => x.style.display !== 'none') :
+                    true;
+                // More robust: compute directly
+                const anyVisible = Array.from(cat.querySelectorAll('.seed-item')).some(x => x.style.display !== 'none');
+                cat.style.display = anyVisible ? '' : 'none';
+            });
+        } catch (e) {
+            // ignore filter errors
+        }
+    }
+
+    // ===== BONUSES FAB + POPUP UI =====
+    initializeBonusesUI() {
+        try {
+            this.bonusesFabEl = document.getElementById('bonusesFab') || null;
+            this.bonusesPopupEl = document.getElementById('bonusesPopup') || null;
+            this.bonusesPopupBodyEl = document.getElementById('bonusesPopupBody') || null;
+            this.bonusesCloseEl = document.getElementById('closeBonusesPopup') || null;
+
+            // Fallback: create the UI if markup is missing
+            if (!this.bonusesFabEl || !this.bonusesPopupEl || !this.bonusesPopupBodyEl) {
+                const container = document.querySelector('.garden-area');
+                if (container) {
+                    if (!this.bonusesFabEl) {
+                        const btn = document.createElement('button');
+                        btn.id = 'bonusesFab';
+                        btn.className = 'bonuses-fab';
+                        btn.type = 'button';
+                        btn.title = 'Show Active Bonuses';
+                        btn.setAttribute('aria-label', 'Show Active Bonuses');
+                        btn.setAttribute('aria-haspopup', 'dialog');
+                        btn.setAttribute('aria-controls', 'bonusesPopup');
+                        btn.setAttribute('aria-expanded', 'false');
+                        btn.textContent = '+';
+                        container.appendChild(btn);
+                    }
+                    if (!this.bonusesPopupEl) {
+                        const pop = document.createElement('div');
+                        pop.id = 'bonusesPopup';
+                        pop.className = 'bonuses-popup';
+                        pop.setAttribute('role', 'dialog');
+                        pop.setAttribute('aria-modal', 'false');
+                        pop.setAttribute('hidden', '');
+                        pop.style.display = 'none';
+                        pop.innerHTML = `
+                            <div class="bonuses-popup-header">
+                                <h3 class="bonuses-popup-title">🌟 Active Bonuses</h3>
+                                <button id="closeBonusesPopup" class="close-btn" type="button" aria-label="Close">&times;</button>
+                            </div>
+                            <div id="bonusesPopupBody" class="bonuses-popup-body"></div>
+                        `;
+                        container.appendChild(pop);
+                    }
+                    // Requery references
+                    this.bonusesFabEl = document.getElementById('bonusesFab');
+                    this.bonusesPopupEl = document.getElementById('bonusesPopup');
+                    this.bonusesPopupBodyEl = document.getElementById('bonusesPopupBody');
+                    this.bonusesCloseEl = document.getElementById('closeBonusesPopup');
+                }
+            }
+
+            this.bonusesUIReady = !!(this.bonusesFabEl && this.bonusesPopupEl && this.bonusesPopupBodyEl);
+            console.log('[BonusesUI] init', {
+                fab: !!this.bonusesFabEl,
+                popup: !!this.bonusesPopupEl,
+                body: !!this.bonusesPopupBodyEl,
+                ready: this.bonusesUIReady
+            });
+
+            const add = (el, ev, fn) => {
+                if (!el) return;
+                el.removeEventListener(ev, fn);
+                el.addEventListener(ev, fn);
+                this.eventListeners.push({ element: el, event: ev, handler: fn });
+            };
+
+            add(this.bonusesFabEl, 'click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const willOpen = this.bonusesPopupEl?.hasAttribute('hidden');
+                this.toggleBonusesPopup(!!willOpen);
+            });
+
+            add(this.bonusesCloseEl, 'click', (e) => {
+                e.preventDefault();
+                this.toggleBonusesPopup(false);
+            });
+
+            // Click outside to close
+            add(document, 'click', (e) => {
+                const clickedFab = e.target.closest && e.target.closest('#bonusesFab');
+                if (clickedFab) {
+                    // Delegate open/close in case direct listener didn't bind
+                    const willOpen = this.bonusesPopupEl?.hasAttribute('hidden');
+                    this.toggleBonusesPopup(!!willOpen);
+                    return;
+                }
+                if (!this.bonusesPopupEl || this.bonusesPopupEl.hasAttribute('hidden')) return;
+                const withinPopup = e.target.closest && e.target.closest('#bonusesPopup');
+                if (!withinPopup) {
+                    this.toggleBonusesPopup(false);
+                }
+            });
+
+            // Escape to close
+            add(document, 'keydown', (e) => {
+                if (e.key === 'Escape') {
+                    this.toggleBonusesPopup(false);
+                }
+            });
+
+            // Keyboard shortcut: B to toggle bonuses
+            add(document, 'keydown', (e) => {
+                const target = e.target;
+                const isTyping = target && (
+                    target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.isContentEditable
+                );
+                if (isTyping) return;
+                if (e.key === 'b' || e.key === 'B') {
+                    e.preventDefault();
+                    console.log('[BonusesUI] B pressed');
+                    const willOpen = this.bonusesPopupEl?.hasAttribute('hidden');
+                    this.toggleBonusesPopup(!!willOpen);
+                }
+            });
+
+            // Keep content fresh
+            this.updateBonusesPopup();
+        } catch (_) {
+            // no-op
+        }
+    }
+
+    toggleBonusesPopup(open) {
+        if (!this.bonusesPopupEl || !this.bonusesFabEl) return;
+        if (open) {
+            this.updateBonusesPopup();
+            this.bonusesPopupEl.removeAttribute('hidden');
+            this.bonusesPopupEl.style.display = 'block';
+            this.bonusesFabEl.setAttribute('aria-expanded', 'true');
+        } else {
+            this.bonusesPopupEl.setAttribute('hidden', '');
+            this.bonusesPopupEl.style.display = 'none';
+            this.bonusesFabEl.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    updateBonusesPopup() {
+        if (!this.bonusesPopupBodyEl) return;
+        const html = this.buildBonusesPopupHTML();
+        this.bonusesPopupBodyEl.innerHTML = html;
+    }
+
+    buildBonusesPopupHTML() {
+        const { totals, items } = this.computeGlobalBonusesSummary();
+        const itemKeys = Object.keys(items);
+
+        // Compute per-source contributions
+        const dec = {
+            growth: totals.growth || 0,
+            harvest: totals.harvest || 0,
+            water: totals.water || 0,
+            protection: totals.protection || 0
+        };
+        const upgradesHarvest = Math.round(((this.harvestBonus || 0) * 100));
+        const prestigeHarvest = Math.round((this.getPrestigeHarvestBonus() || 0) * 100);
+        const rebirthHarvest = Math.round((this.getRebirthHarvestBonus() || 0) * 100);
+        const seedDiscount = Math.round((this.getPrestigeSeedDiscount() || 0) * 100);
+
+        const totalHarvestAllSources = dec.harvest + upgradesHarvest + prestigeHarvest + rebirthHarvest;
+
+        const itemsList = itemKeys.length
+            ? `<div class="bonuses-section-title">Global Decorations</div>
+               <ul class="bonuses-list">
+               ${itemKeys.map(key => {
+                    const it = items[key];
+                    // Parse percent from bonus string then multiply by count
+                    const m = String(it.bonus || '').match(/(\d+)%/);
+                    const per = m ? parseInt(m[1], 10) : 0;
+                    const totalPct = per * (it.count || 0);
+                    const left = `<span class="bonus-name">${it.icon || '🌸'} ${it.name} × <span class="bonus-count">${it.count}</span></span>`;
+                    const right = `<span class="bonus-total">+${totalPct}%</span>`;
+                    return `<li>${left}<span>${right}</span></li>`;
+               }).join('')}
+               </ul>`
+            : '<div class="bonuses-section-title">Global Decorations</div><p style="color: var(--color-text-secondary);">No global decorations placed yet.</p>';
+
+        const categoryTotals = `
+            <div class="bonuses-section-title">Category Totals</div>
+            <div class="bonuses-totals">
+                <div class="row"><span class="label">Growth</span><span class="value">+${dec.growth}%</span></div>
+                <div class="row"><span class="label">Harvest</span><span class="value">+${totalHarvestAllSources}%</span></div>
+                <div class="row"><span class="label">Water efficiency</span><span class="value">+${dec.water}%</span></div>
+                <div class="row"><span class="label">Protection</span><span class="value">+${dec.protection}%</span></div>
+                <div class="row"><span class="label">Seed discount</span><span class="value">${seedDiscount}%</span></div>
+            </div>`;
+
+        const bySource = `
+            <div class="bonuses-section-title">Totals by Source</div>
+            <div class="bonuses-by-source">
+                <div class="source">
+                    <div class="source-title">Global Decorations</div>
+                    <div class="source-lines">
+                        <div>Growth: +${dec.growth}%</div>
+                        <div>Harvest: +${dec.harvest}%</div>
+                        <div>Water efficiency: +${dec.water}%</div>
+                        <div>Protection: +${dec.protection}%</div>
+                    </div>
+                </div>
+                <div class="source">
+                    <div class="source-title">Upgrades</div>
+                    <div class="source-lines">
+                        <div>Harvest: +${upgradesHarvest}%</div>
+                    </div>
+                </div>
+                <div class="source">
+                    <div class="source-title">Prestige</div>
+                    <div class="source-lines">
+                        <div>Harvest: +${prestigeHarvest}%</div>
+                        <div>Seed discount: ${seedDiscount}%</div>
+                    </div>
+                </div>
+                <div class="source">
+                    <div class="source-title">Rebirth</div>
+                    <div class="source-lines">
+                        <div>Harvest: +${rebirthHarvest}%</div>
+                    </div>
+                </div>
+            </div>`;
+
+        return [itemsList, '<div class="bonuses-divider"></div>', categoryTotals, '<div class="bonuses-divider"></div>', bySource].join('');
     }
     
     adjustCanvasForMobile() {
         if (!this.canvas) return;
         
         // Calculate responsive canvas size that respects viewport width and height
-        const maxCanvasSize = 600;
+        const isLandscape = window.matchMedia && window.matchMedia('(orientation: landscape)').matches;
+        // In landscape, allow a larger canvas, limited by viewport height to avoid overflow
+        const maxCanvasSize = isLandscape
+            ? Math.max(600, Math.min(900, Math.floor((window.innerHeight || 600) * 0.9)))
+            : 600;
         const minCanvasSize = 240;
         const widthBased = Math.floor(window.innerWidth * 0.9);
-        const heightBased = Math.floor(window.innerHeight * 0.65);
+        const heightBased = Math.floor(window.innerHeight * (isLandscape ? 0.9 : 0.65));
 
         let canvasSize = Math.min(maxCanvasSize, Math.max(minCanvasSize, widthBased));
 
@@ -1678,6 +2423,27 @@ class GardenGame {
         // Make admin functions globally accessible
         this.makeAdminFunctionsGlobal();
         
+    }
+
+    // ===== PRICING HELPERS =====
+    // Returns a multiplier based on tool level to reduce shop prices
+    // Each level beyond 1 reduces price by 15%, floored at 20% of base; final price has a hard floor of $1
+    getToolPriceMultiplier(tool) {
+        const lvl = Math.max(1, (this.toolLevels && this.toolLevels[tool]) || 1);
+        const reductionPerLevel = 0.15; // 15% per level beyond level 1
+        // e.g., L1=1.0, L2=0.85, L3=0.70, ... with a floor multiplier of 0.2
+        const mult = 1 - reductionPerLevel * (lvl - 1);
+        return Math.max(0.2, mult);
+    }
+
+    getWaterPurchasePrice() {
+        const unit = Math.floor(this.waterPriceBase * this.getToolPriceMultiplier('water'));
+        return Math.max(1, unit);
+    }
+
+    getFertilizerPurchasePrice() {
+        const unit = Math.floor(this.fertilizerPriceBase * this.getToolPriceMultiplier('fertilizer'));
+        return Math.max(1, unit);
     }
     
     initializeDecorationShop() {
@@ -3024,31 +3790,31 @@ class GardenGame {
         
         // Purchase functions
         window.buyWater = () => {
-            const waterCost = 5;
+            const waterCost = this.getWaterPurchasePrice();
             if (this.money >= waterCost) {
                 this.money -= waterCost;
                 this.water += 1;
                 this.updateUI();
-                this.showMessage('💧 Water purchased! You can now water your plants.', 'success');
+                this.showMessage(`💧 Water purchased for $${waterCost}! You can now water your plants.`, 'success');
                 this.playSound('success');
                 this.saveGame();
             } else {
-                this.showMessage('Not enough money to buy water!', 'error');
+                this.showMessage(`Not enough money to buy water! Cost: $${waterCost}`, 'error');
                 this.playSound('error');
             }
         };
         
         window.buyFertilizer = () => {
-            const fertilizerCost = 10;
+            const fertilizerCost = this.getFertilizerPurchasePrice();
             if (this.money >= fertilizerCost) {
                 this.money -= fertilizerCost;
                 this.fertilizer += 1;
                 this.updateUI();
-                this.showMessage('🌱 Fertilizer purchased! You can now fertilize your plants.', 'success');
+                this.showMessage(`🌱 Fertilizer purchased for $${fertilizerCost}! You can now fertilize your plants.`, 'success');
                 this.playSound('success');
                 this.saveGame();
             } else {
-                this.showMessage('Not enough money to buy fertilizer!', 'error');
+                this.showMessage(`Not enough money to buy fertilizer! Cost: $${fertilizerCost}`, 'error');
                 this.playSound('error');
             }
         };
@@ -3110,9 +3876,14 @@ class GardenGame {
         
         // Garden functions
         window.clearGarden = () => {
+            // Reset garden size and expansion pricing as part of admin clear
+            this.gardenSize = 8;
+            this.gridSize = this.gardenSize;
+            this.expansionCost = 1500;
             this.garden = this.initializeGarden();
             this.sprinklers = []; // Clear all sprinklers
-            this.showMessage('Garden and sprinklers cleared!', 'success');
+            this.adjustCanvasForMobile();
+            this.showMessage('Garden reset to 8x8 and sprinklers cleared!', 'success');
             this.saveGame();
             // Update the UI to reflect the cleared garden
             this.updateUI();
@@ -3550,7 +4321,7 @@ class GardenGame {
                 this.gardenSize = 8;
                 this.gridSize = 8;
                 this.cellSize = Math.floor(600 / this.gridSize);
-                this.expansionCost = 5000;
+                this.expansionCost = 1500;
                 this.garden = this.initializeGarden();
                 this.sprinklers = [];
                 
@@ -3821,47 +4592,38 @@ class GardenGame {
             return;
         }
         
-        // Check if seed is available in current season
+        // Allow selection regardless of current money or stock; enforce on planting instead
+        // Keep a gentle heads-up if the seed can't be planted right now
         if (!this.isSeedAvailable(seedType)) {
-            this.showMessage(`${plantData.name} is not available in ${this.currentSeason}!`, 'error');
-            return;
+            this.showMessage(`${plantData.name} is not available in ${this.currentSeason}.`, 'error');
+        } else if (inventory.stock <= 0) {
+            this.showMessage(`${plantData.name} is out of stock.`, 'error');
+        } else if (this.money < plantData.cost) {
+            this.showMessage(`Selected ${plantData.name}, but you're short on money.`, 'info');
+        }
+
+        this.selectedSeed = seedType;
+        
+        // Clear all previous selections in shop/tool areas
+        document.querySelectorAll('.seed-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelectorAll('.sprinkler-tool').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Add selection highlight in the shop list if present
+        const seedElement = document.querySelector(`[data-seed="${seedType}"]`);
+        if (seedElement) {
+            seedElement.classList.add('selected');
         }
         
-        if (inventory.stock <= 0) {
-            this.showMessage(`${plantData.name} is out of stock!`, 'error');
-            // Clear selection when out of stock
-            this.selectedSeed = null;
-            document.querySelectorAll('.seed-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            return;
-        }
-        
-        if (this.money >= plantData.cost) {
-            this.selectedSeed = seedType;
-            
-            // Clear all previous selections
-            document.querySelectorAll('.seed-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            document.querySelectorAll('.tool-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelectorAll('.sprinkler-tool').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            // Add selection to the clicked seed
-            const seedElement = document.querySelector(`[data-seed="${seedType}"]`);
-            if (seedElement) {
-                seedElement.classList.add('selected');
-            }
-            
-            // Update shop display to reflect current state
-            this.updateShopDisplay();
-        } else {
-            this.showMessage('Not enough money!');
-        }
+        // Update displays to reflect selection
+        this.updateShopDisplay();
+        try { this.updateQuickSeedsBar(); } catch (_) {}
     }
     
     selectTool(tool) {
@@ -3890,6 +4652,7 @@ class GardenGame {
         this.highlightQuickMenuSelection();
         // Update shop display when clearing seed selection
         this.updateShopDisplay();
+        try { this.updateQuickSeedsBar(); } catch (_) {}
         this.hideToolQuickMenu();
     }
     
@@ -3919,6 +4682,7 @@ class GardenGame {
         });
         // Update shop display when clearing seed selection
         this.updateShopDisplay();
+        try { this.updateQuickSeedsBar(); } catch (_) {}
     }
     
     handleCanvasClick(e) {
@@ -4132,6 +4896,7 @@ class GardenGame {
                         // Check if fully mature
                         if (cell.plant.growthStage >= this.growthStages.length - 1) {
                             cell.plant.isFullyGrown = true;
+                            this.maybeUnlockSpeedGrower(row, col);
                         }
                         
                         this.saveGame();
@@ -4180,6 +4945,7 @@ class GardenGame {
                         // Check if fully mature
                         if (cell.plant.growthStage >= this.growthStages.length - 1) {
                             cell.plant.isFullyGrown = true;
+                            this.maybeUnlockSpeedGrower(row, col);
                         }
                         
                         this.saveGame();
@@ -4193,6 +4959,78 @@ class GardenGame {
                 cell.fertilizerGrowthStart = null;
                 cell.fertilizerGrowthDuration = null;
                 cell.lastFertilizerGrowthCheck = null;
+            }
+        }
+    }
+    
+    // Passive growth: slow stage advancement even without water/fertilizer/sprinkler
+    // Intentionally conservative so boosters remain meaningfully faster
+    checkPassiveGrowth(row, col) {
+        const cell = this.garden[row][col];
+        if (!cell || !cell.plant || cell.plant.isFullyGrown) return;
+        if (!this.passiveGrowthEnabled) return;
+        
+        // Skip if any active boosted growth is ongoing (water/fertilizer window)
+        const now = Date.now();
+        const waterActive = cell.watered && cell.waterGrowthStart && cell.waterGrowthDuration && (now - cell.waterGrowthStart) < cell.waterGrowthDuration;
+        const fertActive = cell.fertilized && cell.fertilizerGrowthStart && cell.fertilizerGrowthDuration && (now - cell.fertilizerGrowthStart) < cell.fertilizerGrowthDuration;
+        if (waterActive || fertActive) return;
+        
+        // Skip passive tick if sprinkler growth applies to this tile
+        const sprinklerBonus = this.getSprinklerBonus(row, col);
+        if (sprinklerBonus > 0) return;
+        
+        const plantData = this.plantTypes[cell.plant.type];
+        if (!plantData) return;
+        
+        // Base time per stage for passive growth
+        let growthTimePerStage = Number.isFinite(this.passiveGrowthBaseMs) && this.passiveGrowthBaseMs > 0
+            ? this.passiveGrowthBaseMs
+            : 2 * 60 * 1000; // fallback: 2 minutes
+        
+        // Apply seed-specific growth multiplier only if enabled
+        if (!this.passiveIgnoreSeedMultiplier) {
+            const seedType = cell.plant.type;
+            const growthMultiplier = this.getSeedGrowthMultiplier(seedType);
+            growthTimePerStage *= growthMultiplier;
+        }
+        
+        // Apply decorations that boost growth (same semantics as other growth paths)
+        const decorationGrowthBonus = (cell.plant.bonuses?.growth || 0) / 100;
+        if (decorationGrowthBonus > 0) {
+            growthTimePerStage /= (1 + decorationGrowthBonus);
+        }
+        
+        // Apply weather and seasonal multipliers only if enabled (higher means faster growth => divide time)
+        if (!this.passiveIgnoreEnvMultipliers) {
+            const weatherMult = (this.weatherEffects[this.weather]?.growthMultiplier) || 1.0;
+            const seasonMult = this.seasonMultiplier || 1.0;
+            growthTimePerStage /= weatherMult;
+            growthTimePerStage /= seasonMult;
+        }
+        
+        // Track per-cell passive timing
+        if (!cell.lastPassiveGrowth) {
+            cell.lastPassiveGrowth = now;
+            return;
+        }
+        
+        const elapsed = now - cell.lastPassiveGrowth;
+        if (elapsed >= growthTimePerStage) {
+            if (cell.plant.growthStage < this.growthStages.length - 1) {
+                cell.plant.growthStage++;
+                cell.lastPassiveGrowth = now;
+                
+                // Fully grown check
+                if (cell.plant.growthStage >= this.growthStages.length - 1) {
+                    cell.plant.isFullyGrown = true;
+                    this.maybeUnlockSpeedGrower(row, col);
+                }
+                
+                // Persist and reflect
+                this.saveGame();
+                this.updateUI();
+                this.draw();
             }
         }
     }
@@ -4353,6 +5191,7 @@ class GardenGame {
                     // Check if fully mature
                     if (cell.plant.growthStage >= this.growthStages.length - 1) {
                         cell.plant.isFullyGrown = true;
+                        this.maybeUnlockSpeedGrower(row, col);
                     }
                     
                     // Save game and update UI
@@ -4370,6 +5209,24 @@ class GardenGame {
             for (let col = 0; col < this.gridSize; col++) {
                 this.checkSprinklerGrowth(row, col);
             }
+        }
+    }
+    
+    // Unlock Speed Grower if a plant reached maturity within 30 seconds of planting
+    maybeUnlockSpeedGrower(row, col) {
+        try {
+            if (!this.achievements || !this.achievements.speedGrower || this.achievements.speedGrower.unlocked) return;
+            const cell = this.garden?.[row]?.[col];
+            if (!cell || !cell.plant || !cell.plant.isFullyGrown) return;
+            const plantedAt = Number(cell.plantedAt || cell.plant.plantedAt);
+            if (!Number.isFinite(plantedAt) || plantedAt <= 0) return;
+            const now = Date.now();
+            if ((now - plantedAt) <= 30000) {
+                this.unlockAchievement('speedGrower');
+                this.achievementStats.speedGrowerUnlocked = true;
+            }
+        } catch (e) {
+            console.warn('maybeUnlockSpeedGrower error:', e);
         }
     }
     
@@ -4467,6 +5324,9 @@ class GardenGame {
                 plantedAt: Date.now()
             };
         
+        // Apply any existing global decoration bonuses to this new plant so globals affect newly planted seeds
+        this.applyAllGlobalBonusesToCell(row, col);
+        
         // Verify the plant was actually created
         if (!this.garden[row][col].plant) {
             this.showMessage(`Error: Failed to plant ${seedData.name}!`, 'error');
@@ -4485,6 +5345,8 @@ class GardenGame {
             const x = (col * this.cellSize) + (this.cellSize / 2);
             const y = (row * this.cellSize) + (this.cellSize / 2);
             this.addParticle(x, y, 'plant', '');
+            // Gentle soft burst
+            this.spawnGentleBurst(x, y, 'plant', 12);
         
         // Save immediately to ensure plant is persisted
         this.saveGame();
@@ -4573,6 +5435,8 @@ class GardenGame {
             const x = (col * this.cellSize) + (this.cellSize / 2);
             const y = (row * this.cellSize) + (this.cellSize / 2);
             this.addParticle(x, y, 'water', '');
+            // Gentle soft burst
+            this.spawnGentleBurst(x, y, 'water', 12);
             
             this.updateUI();
             this.saveGame();
@@ -4632,6 +5496,8 @@ class GardenGame {
             const x = (col * this.cellSize) + (this.cellSize / 2);
             const y = (row * this.cellSize) + (this.cellSize / 2);
             this.addParticle(x, y, 'fertilizer', '');
+            // Gentle soft burst
+            this.spawnGentleBurst(x, y, 'fertilizer', 12);
 
             this.updateChallengeProgress('fertilize', 1);
             
@@ -4684,6 +5550,8 @@ class GardenGame {
             const x = (col * this.cellSize) + (this.cellSize / 2);
             const y = (row * this.cellSize) + (this.cellSize / 2);
             this.addParticle(x, y, 'money', finalValue);
+            // Gentle soft burst
+            this.spawnGentleBurst(x, y, 'harvest', 14);
             
             // Show bonus message if harvest tool is upgraded
             if (this.harvestBonus > 0 || harvestDecorationBonus > 0 || this.rebirths > 0 || this.getPrestigeHarvestBonus() > 0) {
@@ -4747,6 +5615,10 @@ class GardenGame {
                 fertilizerCooldown: 0,
                 plantedAt: null
             };
+            // Gentle soft burst for shovel/remove
+            const x = (col * this.cellSize) + (this.cellSize / 2);
+            const y = (row * this.cellSize) + (this.cellSize / 2);
+            this.spawnGentleBurst(x, y, 'remove', 10);
             
             this.updateUI();
             this.saveGame();
@@ -4818,6 +5690,9 @@ class GardenGame {
                     
                     // Check for sprinkler growth
                     this.checkSprinklerGrowth(row, col);
+                    
+                    // Check for slow passive growth (no boosters)
+                    this.checkPassiveGrowth(row, col);
                 }
             }
         }
@@ -4911,27 +5786,59 @@ class GardenGame {
         const offsetX = (this.canvas.width - gridWidth) / 2;
         const offsetY = (this.canvas.height - gridHeight) / 2;
         
-        // Fill the entire canvas with background color
+        // Fill the entire canvas background
         this.ctx.fillStyle = '#f8f9fa';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Ensure the external per-cell tile texture is loading
+        if (!this.tileTextureLoaded && !this._tileTextureAttempted) {
+            // Fire and forget; on load we'll trigger a redraw
+            this.loadGrassTileTexture();
+        }
+
+        if (this.tileTextureLoaded && this.tileTextureImage) {
+            // Draw the provided tile image into each grid cell (crisp, per-tile texture)
+            this.ctx.save();
+            const hadSmoothing = typeof this.ctx.imageSmoothingEnabled === 'boolean' ? this.ctx.imageSmoothingEnabled : undefined;
+            if (typeof this.ctx.imageSmoothingEnabled === 'boolean') this.ctx.imageSmoothingEnabled = false;
+
+            const sx = 0, sy = 0, sw = this.tileTextureImage.naturalWidth || 16, sh = this.tileTextureImage.naturalHeight || 16;
+            for (let row = 0; row < this.gridSize; row++) {
+                for (let col = 0; col < this.gridSize; col++) {
+                    const dx = offsetX + col * this.cellSize;
+                    const dy = offsetY + row * this.cellSize;
+                    this.ctx.drawImage(this.tileTextureImage, sx, sy, sw, sh, dx, dy, this.cellSize, this.cellSize);
+                }
+            }
+
+            if (hadSmoothing !== undefined) this.ctx.imageSmoothingEnabled = hadSmoothing;
+            this.ctx.restore();
+        } else {
+            // Fallback: solid green until the image loads to avoid any pattern repeat artifacts
+            this.ctx.fillStyle = '#79c76b';
+            this.ctx.fillRect(offsetX, offsetY, gridWidth, gridHeight);
+        }
         
-        // Fill the grid area with a slightly different color
-        this.ctx.fillStyle = '#e9ecef';
-        this.ctx.fillRect(offsetX, offsetY, gridWidth, gridHeight);
-        
-        this.ctx.strokeStyle = '#dee2e6';
+        // Slightly more visible grid lines (still subtle) and pixel-crisp alignment
+        const crisp = (v) => Math.round(v) + 0.5; // align 1px strokes to device pixels
+    this.ctx.strokeStyle = 'rgba(34, 139, 34, 0.55)'; // slightly stronger for more clarity
         this.ctx.lineWidth = 1;
         
         // Draw grid lines only within the grid area, offset by the center position
         for (let i = 0; i <= this.gridSize; i++) {
+            const vx = crisp(offsetX + i * this.cellSize);
+            const hy = crisp(offsetY + i * this.cellSize);
+            
+            // Vertical line
             this.ctx.beginPath();
-            this.ctx.moveTo(offsetX + i * this.cellSize, offsetY);
-            this.ctx.lineTo(offsetX + i * this.cellSize, offsetY + gridHeight);
+            this.ctx.moveTo(vx, crisp(offsetY));
+            this.ctx.lineTo(vx, crisp(offsetY + gridHeight));
             this.ctx.stroke();
             
+            // Horizontal line
             this.ctx.beginPath();
-            this.ctx.moveTo(offsetX, offsetY + i * this.cellSize);
-            this.ctx.lineTo(offsetX + gridWidth, offsetY + i * this.cellSize);
+            this.ctx.moveTo(crisp(offsetX), hy);
+            this.ctx.lineTo(crisp(offsetX + gridWidth), hy);
             this.ctx.stroke();
         }
         
@@ -4944,9 +5851,6 @@ class GardenGame {
                 
                 if (cell.plant) {
                     this.drawPlant(row, col, cell, offsetX, offsetY);
-                } else {
-                    this.ctx.fillStyle = '#e9ecef';
-                    this.ctx.fillRect(x + 2, y + 2, this.cellSize - 4, this.cellSize - 4);
                 }
             }
         }
@@ -4978,6 +5882,119 @@ class GardenGame {
         // Ensure globalAlpha is reset to 1 at the end of each draw cycle
         this.ctx.globalAlpha = 1;
     }
+    
+        // Create or reuse a repeating pixel-art grass pattern for the grid background
+        getGrassPattern(tilePx = 16) {
+            if (!this.ctx) return null;
+            // Convert requested pixel size to an integer scale of an 8x8 pixel-art tile
+            const scale = Math.max(1, Math.floor((tilePx | 0) / 8));
+            const size = 8 * scale; // final tile dimension in pixels
+            const cacheKey = `s${scale}`;
+            if (this.grassPatternCache && this.grassPatternCache[cacheKey]) return this.grassPatternCache[cacheKey];
+
+            const cvs = (typeof OffscreenCanvas !== 'undefined') ? new OffscreenCanvas(size, size) : document.createElement('canvas');
+            cvs.width = size;
+            cvs.height = size;
+            const g = cvs.getContext('2d');
+            if (!g) return null;
+
+            // Keep it pixelated
+            if (typeof g.imageSmoothingEnabled === 'boolean') g.imageSmoothingEnabled = false;
+
+            const s = scale; // pixel block size for each of the 8x8 pattern pixels
+
+            // Palette: base, light, dark
+            const base = '#79c76b';
+            const light = '#8fd77f';
+            const dark = '#5ea452';
+
+            // 8x8 pixel-art pattern indices (0=base, 1=light, 2=dark)
+            const map = [
+                [0,1,0,0,1,0,0,2],
+                [0,0,2,0,0,1,0,0],
+                [1,0,0,1,0,0,2,0],
+                [0,2,0,0,1,0,0,1],
+                [0,0,1,0,0,2,0,0],
+                [2,0,0,1,0,0,1,0],
+                [0,1,0,0,2,0,0,1],
+                [0,0,2,0,0,1,0,0]
+            ];
+
+            // Paint base first for solid background
+            g.fillStyle = base;
+            g.fillRect(0, 0, size, size);
+
+            // Paint light and dark pixels scaled by s for crisp edges
+            for (let y = 0; y < 8; y++) {
+                for (let x = 0; x < 8; x++) {
+                    const idx = map[y][x];
+                    if (idx === 1) {
+                        g.fillStyle = light;
+                        g.fillRect(x * s, y * s, s, s);
+                    } else if (idx === 2) {
+                        g.fillStyle = dark;
+                        g.fillRect(x * s, y * s, s, s);
+                    }
+                }
+            }
+
+            const pattern = this.ctx.createPattern(cvs, 'repeat');
+            if (!this.grassPatternCache) this.grassPatternCache = {};
+            this.grassPatternCache[cacheKey] = pattern;
+            return pattern;
+        }
+
+        // Load external grass tile image once; resolves true if loaded, false if failed
+        async loadGrassTileTexture(src = this.tileTexturePath) {
+            if (this.tileTextureLoaded) return true;
+            if (this._tileTextureAttempted && !this.tileTextureImage) return false;
+            this._tileTextureAttempted = true;
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    this.tileTextureImage = img;
+                    this.tileTextureLoaded = true;
+                    try { requestAnimationFrame(() => this.draw()); } catch (_) {}
+                    resolve(true);
+                };
+                img.onerror = () => {
+                    // If plus sign path failed, try URL-encoded fallback once
+                    if (src.includes('+')) {
+                        const alt = src.replace('+', '%2B');
+                        // Avoid infinite loop by calling a fresh Image inside this branch
+                        const img2 = new Image();
+                        img2.onload = () => {
+                            this.tileTextureImage = img2;
+                            this.tileTextureLoaded = true;
+                            try { requestAnimationFrame(() => this.draw()); } catch (_) {}
+                            resolve(true);
+                        };
+                        img2.onerror = () => {
+                            this.tileTextureImage = null;
+                            this.tileTextureLoaded = false;
+                            resolve(false);
+                        };
+                        try {
+                            img2.decoding = 'async';
+                            img2.src = encodeURI(alt);
+                            return;
+                        } catch (e) {
+                            // fall through to failure
+                        }
+                    }
+                    this.tileTextureImage = null;
+                    this.tileTextureLoaded = false;
+                    resolve(false);
+                };
+                try {
+                    img.decoding = 'async';
+                    img.src = encodeURI(src);
+                } catch (e) {
+                    this.tileTextureImage = null;
+                    resolve(false);
+                }
+            });
+        }
     
     drawPlant(row, col, cell, offsetX, offsetY) {
         if (!this.ctx) {
@@ -5341,11 +6358,16 @@ class GardenGame {
             // Force a reflow for the multiplier element too
             growthMultiplierElement.offsetHeight;
         }
+        // Refresh Quick Seeds to reflect seasonal availability
+        try { this.updateQuickSeedsBar(); } catch (_) {}
     }
     
     updateUI() {
         // Force immediate update of all UI elements
         this.updateGardenTitle();
+        if (!this.bonusesUIReady) {
+            this.initializeBonusesUI();
+        }
 
         const moneyElement = document.getElementById('money');
         const waterElement = document.getElementById('water');
@@ -5394,6 +6416,65 @@ class GardenGame {
         if (soundBtn) {
             soundBtn.textContent = this.soundEnabled ? '🔊 Sound' : '🔇 Sound';
         }
+        // Refresh bonuses in case values changed
+        this.updateBonusesPopup();
+
+        // Keep Expand Garden price label in sync with current expansionCost
+        const expandPriceEl = document.getElementById('expandGardenPriceLabel');
+        if (expandPriceEl) {
+            expandPriceEl.textContent = `$${this.expansionCost}`;
+        }
+        // Keep Quick Seeds in sync with inventory/selection changes
+        try { this.updateQuickSeedsBar(); } catch (_) {}
+    }
+
+    // ===== Responsive layout: move secondary panels under the garden on wide screens =====
+    setupResponsiveLayout() {
+        const under = document.getElementById('underGarden');
+        const sidebar = document.querySelector('.sidebar');
+        if (!under || !sidebar) return;
+
+        // Cache original parent markers once
+        const ids = ['achievementsSection', 'challengesSection', 'statsSection'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && !el.dataset.originalParent) {
+                el.dataset.originalParent = 'sidebar';
+            }
+        });
+
+        const reflow = () => {
+            const wide = window.innerWidth >= 1200;
+            const targets = ids
+                .map(id => document.getElementById(id))
+                .filter(Boolean);
+            if (wide) {
+                // Move into the under-garden area if not already there
+                targets.forEach(el => {
+                    if (el.parentElement !== under) under.appendChild(el);
+                });
+            } else {
+                // Move back to the sidebar (after prestige section if present)
+                const prestige = document.getElementById('prestigeSection');
+                const insertAfter = prestige && prestige.parentElement === sidebar ? prestige : null;
+                targets.forEach(el => {
+                    if (el.parentElement !== sidebar) {
+                        if (insertAfter && insertAfter.nextSibling) {
+                            sidebar.insertBefore(el, insertAfter.nextSibling);
+                        } else if (insertAfter) {
+                            sidebar.appendChild(el);
+                        } else {
+                            sidebar.appendChild(el);
+                        }
+                    }
+                });
+            }
+        };
+
+        // Initial and reactive
+        reflow();
+        window.addEventListener('resize', reflow);
+        window.addEventListener('orientationchange', reflow);
     }
 
     defaultGardenName() {
@@ -5628,7 +6709,23 @@ class GardenGame {
             }
         });
         
-
+        // Update essentials (water/fertilizer) dynamic prices in the UI
+        try {
+            const waterLabel = document.getElementById('waterPriceLabel');
+            if (waterLabel) {
+                const price = this.getWaterPurchasePrice();
+                waterLabel.textContent = `$${Number(price).toLocaleString()}`;
+            }
+            const fertLabel = document.getElementById('fertilizerPriceLabel');
+            if (fertLabel) {
+                const price = this.getFertilizerPurchasePrice();
+                fertLabel.textContent = `$${Number(price).toLocaleString()}`;
+            }
+        } catch (e) {
+            // Non-fatal UI update issue
+        }
+        // Also refresh Quick Seeds bar whenever shop/inventory visuals update
+        try { this.updateQuickSeedsBar(); } catch (_) {}
     }
     
 
@@ -5900,6 +6997,21 @@ class GardenGame {
             return;
         }
         
+        // If the tab is hidden, drastically reduce work but keep minimal timers
+        if (document.hidden) {
+            try {
+                const now = Date.now();
+                if (!this._lastBgTick || (now - this._lastBgTick) >= 1000) {
+                    this._lastBgTick = now;
+                    // Keep session time and autosave progressing in the background
+                    this.updateSessionTime();
+                    this.checkAutoSave();
+                }
+            } catch (_) {}
+            this.animationFrameId = requestAnimationFrame(() => this.gameLoop());
+            return;
+        }
+        
         try {
             // Update season
             this.updateSeason();
@@ -5914,6 +7026,9 @@ class GardenGame {
             
             // Check sprinkler growth for all plants
             this.checkAllSprinklerGrowth();
+            
+            // Periodically check for softlock and bless the player with a cheap fruit if needed
+            this.checkSoftlockRelief();
             
             // Note: updateShopDisplay is now only called when needed, not in the game loop
             
@@ -5934,6 +7049,115 @@ class GardenGame {
         }
         
         this.animationFrameId = requestAnimationFrame(() => this.gameLoop());
+    }
+
+    // Softlock relief: grant a fully grown cheap fruit on a random empty tile
+    // Runs every softlockCheckInterval (10s). If softlocked, 50% chance each check,
+    // but forces a blessing on the 3rd consecutive eligible check to cap wait at <=30s.
+    checkSoftlockRelief() {
+        const now = Date.now();
+        if (!this.lastSoftlockCheck) this.lastSoftlockCheck = 0;
+        if ((now - this.lastSoftlockCheck) < (this.softlockCheckInterval || 180000)) {
+            return;
+        }
+        this.lastSoftlockCheck = now;
+
+        // Determine if the player is softlocked: no affordable seeds and at least one empty tile
+        const hasEmptyTile = (() => {
+            for (let r = 0; r < this.gridSize; r++) {
+                for (let c = 0; c < this.gridSize; c++) {
+                    const cell = this.garden[r][c];
+                    if (!cell.plant && !this.hasSprinkler(r, c)) return true;
+                }
+            }
+            return false;
+        })();
+        if (!hasEmptyTile) {
+            this.softlockMissCounter = 0;
+            return;
+        }
+
+        // Is there any seed the player can afford right now?
+        const canAffordAny = (() => {
+            let affordable = false;
+            for (const [seedType, inv] of Object.entries(this.shopInventory)) {
+                const plantData = this.plantTypes[seedType];
+                if (!plantData || !inv || inv.stock <= 0) continue;
+                if (!this.isSeedAvailable(seedType)) continue;
+                const baseCost = this.getSeedBaseCost(plantData);
+                const price = this.getDiscountedSeedCost(baseCost);
+                if (this.money >= price) { affordable = true; break; }
+            }
+            return affordable;
+        })();
+
+        // Not softlocked if we can afford something; reset miss counter
+        if (canAffordAny) {
+            this.softlockMissCounter = 0;
+            return;
+        }
+
+        // Softlocked path: increment consecutive miss counter
+        if (!Number.isFinite(this.softlockMissCounter)) this.softlockMissCounter = 0;
+        this.softlockMissCounter += 1;
+
+        // Chance gating to feel occasional, but force on the 3rd eligible check
+        const shouldBless = (this.softlockMissCounter >= 3) || (Math.random() < 0.5);
+        if (!shouldBless) {
+            return;
+        }
+
+        // Choose a very cheap fruit type; prefer lettuce if available, else carrot, else any
+        const candidateTypes = ['lettuce', 'carrot'];
+        let chosenType = candidateTypes.find(t => this.plantTypes[t]);
+        if (!chosenType) {
+            // Fallback to any defined plant type
+            const keys = Object.keys(this.plantTypes || {});
+            if (!keys.length) return;
+            chosenType = keys[0];
+        }
+
+        // Pick a random empty tile
+        const empties = [];
+        for (let r = 0; r < this.gridSize; r++) {
+            for (let c = 0; c < this.gridSize; c++) {
+                const cell = this.garden[r][c];
+                if (!cell.plant && !this.hasSprinkler(r, c)) empties.push([r, c]);
+            }
+        }
+        if (!empties.length) {
+            this.softlockMissCounter = 0;
+            return;
+        }
+        const [row, col] = empties[Math.floor(Math.random() * empties.length)];
+
+        const plantObject = {
+            type: chosenType,
+            stage: this.growthStages.length - 1,
+            plantedAt: now,
+            isFullyGrown: true,
+            growthStage: this.growthStages.length - 1,
+            purchaseCost: 0
+        };
+
+        this.garden[row][col] = {
+            plant: plantObject,
+            watered: false,
+            wateredAt: null,
+            waterCooldown: 0,
+            fertilized: false,
+            fertilizedAt: null,
+            fertilizerCooldown: 0,
+            plantedAt: now
+        };
+
+        const plantName = this.plantTypes[chosenType]?.name || chosenType;
+        this.showMessage(`✨ A blessing arrives: ${plantName}!`, 'success');
+        // Reset the miss counter after a successful blessing
+        this.softlockMissCounter = 0;
+        this.saveGame();
+        this.updateUI();
+        this.draw();
     }
     
     checkPerformance() {
@@ -6148,6 +7372,9 @@ class GardenGame {
             stats: this.stats,
             challenges: this.challenges,
             lastChallengeUpdate: this.lastChallengeUpdate,
+
+            // Quick Seeds preferences
+            seedRecent: Array.isArray(this.seedRecent) ? this.seedRecent : [],
 
             saveTime: Date.now()
         };
@@ -6436,6 +7663,12 @@ class GardenGame {
         return this.prestigeUpgrades?.[upgradeId]?.level ?? 0;
     }
 
+    // Global multiplier to make prestige upgrades cheaper in tokens
+    // Assumption: reduce costs by 30% (multiplier = 0.7). Adjust here if needed.
+    getPrestigeCostMultiplier() {
+        return 0.7;
+    }
+
     getPrestigeUpgradeCost(upgradeId) {
         const config = this.prestigeUpgradeMap?.[upgradeId];
         if (!config) {
@@ -6443,7 +7676,8 @@ class GardenGame {
         }
         const level = this.getPrestigeUpgradeLevel(upgradeId);
         const rawCost = config.baseCost + (config.costGrowth * level);
-        return Math.max(1, Math.floor(rawCost));
+        const scaled = rawCost * this.getPrestigeCostMultiplier();
+        return Math.max(1, Math.floor(scaled));
     }
 
     getPrestigeSeedDiscount() {
@@ -6544,7 +7778,8 @@ class GardenGame {
             const base = Number(config.baseCost || 0);
             const growth = Number(config.costGrowth || 0);
             const refund = (n / 2) * ((2 * base) + ((n - 1) * growth));
-            total += refund;
+            // Scale refund by the same cost multiplier to match current pricing
+            total += refund * this.getPrestigeCostMultiplier();
         });
 
         return Math.max(0, Math.floor(total));
@@ -6609,10 +7844,10 @@ class GardenGame {
         this.stats.sessionStartTime = now;
         this.rebirthNotificationShown = false;
 
-        this.gardenSize = 8;
-        this.gridSize = this.gardenSize;
-        this.cellSize = Math.floor(600 / this.gridSize);
-        this.expansionCost = 5000;
+    this.gardenSize = 8;
+    this.gridSize = this.gardenSize;
+    this.cellSize = Math.floor(600 / this.gridSize);
+    this.expansionCost = 1500;
         this.garden = this.initializeGarden();
 
         this.shopInventory = this.createDefaultShopInventory();
@@ -6620,8 +7855,8 @@ class GardenGame {
         this.sprinklers = [];
         this.lastRestockTime = now;
 
-        this.toolLevels = { water: 1, fertilizer: 1, shovel: 1, harvest: 1 };
-        this.toolUpgradeCosts = { water: 50, fertilizer: 75, shovel: 100, harvest: 60 };
+    this.toolLevels = { water: 1, fertilizer: 1, shovel: 1, harvest: 1 };
+    this.toolUpgradeCosts = { water: 50, fertilizer: 300, shovel: 100, harvest: 60 };
         this.harvestBonus = 0;
 
         this.selectedSeed = null;
@@ -6652,7 +7887,9 @@ class GardenGame {
         this.particles = [];
         this.animations = [];
 
-        this.updateUI();
+    // Recalculate canvas for the reset size
+    this.adjustCanvasForMobile();
+    this.updateUI();
         this.updateToolDisplay();
         this.updateSprinklerDisplay();
         this.updateAchievementsDisplay();
@@ -6922,6 +8159,9 @@ class GardenGame {
         listElement.appendChild(fragment);
 
         this.updatePrestigePanelVisibility();
+        // Also refresh active bonuses summary on any UI rebuild
+        this.updateActiveBonusesDisplay();
+        this.updateBonusesPopup();
     }
 
     purchasePrestigeUpgrade(upgradeId) {
@@ -6958,6 +8198,7 @@ class GardenGame {
 
         this.updateRebirthUI();
         this.updateShopDisplay();
+        this.updateBonusesPopup();
         this.saveGame();
     }
 
@@ -7034,8 +8275,8 @@ class GardenGame {
         this.seasonDay = 1;
         this.seasonMultiplier = 1.0;
         this.seasonStartTime = null; // Will be set on first updateSeason() call
-        this.gardenSize = 8;
-        this.expansionCost = 5000;
+    this.gardenSize = 8;
+    this.expansionCost = 1500;
         
         // Initialize statistics
         this.stats = {
@@ -7278,8 +8519,9 @@ class GardenGame {
         this.money -= upgradeCost;
         this.toolLevels[toolType]++;
         
-        // Increase cost for next upgrade
-        this.toolUpgradeCosts[toolType] = Math.floor(this.toolUpgradeCosts[toolType] * 1.5);
+    // Increase cost for next upgrade (fertilizer scales much faster)
+    const multiplier = toolType === 'fertilizer' ? 2.25 : 1.5;
+    this.toolUpgradeCosts[toolType] = Math.floor(this.toolUpgradeCosts[toolType] * multiplier);
         
         // Add resource bonuses for water and fertilizer tools
         if (toolType === 'water') {
@@ -7308,6 +8550,7 @@ class GardenGame {
         
         this.updateToolDisplay();
         this.updateUI();
+        this.updateBonusesPopup();
         this.saveGame();
     }
 
@@ -7439,31 +8682,31 @@ class GardenGame {
     }
     
     buyWater() {
-        const waterCost = 5;
+        const waterCost = this.getWaterPurchasePrice();
         if (this.money >= waterCost) {
             this.money -= waterCost;
             this.water += 1;
             this.updateUI();
-            this.showMessage('💧 Water purchased! You can now water your plants.', 'success');
+            this.showMessage(`💧 Water purchased for $${waterCost}! You can now water your plants.`, 'success');
             this.playSound('success');
             this.saveGame();
         } else {
-            this.showMessage('Not enough money to buy water!', 'error');
+            this.showMessage(`Not enough money to buy water! Cost: $${waterCost}`, 'error');
             this.playSound('error');
         }
     }
     
     buyFertilizer() {
-        const fertilizerCost = 10;
+        const fertilizerCost = this.getFertilizerPurchasePrice();
         if (this.money >= fertilizerCost) {
             this.money -= fertilizerCost;
             this.fertilizer += 1;
             this.updateUI();
-            this.showMessage('🌱 Fertilizer purchased! You can now fertilize your plants.', 'success');
+            this.showMessage(`🌱 Fertilizer purchased for $${fertilizerCost}! You can now fertilize your plants.`, 'success');
             this.playSound('success');
             this.saveGame();
         } else {
-            this.showMessage('Not enough money to buy fertilizer!', 'error');
+            this.showMessage(`Not enough money to buy fertilizer! Cost: $${fertilizerCost}`, 'error');
             this.playSound('error');
         }
     }
@@ -7547,6 +8790,8 @@ class GardenGame {
         const x = (col * this.cellSize) + (this.cellSize / 2);
         const y = (row * this.cellSize) + (this.cellSize / 2);
         this.addParticle(x, y, 'sprinkler', '');
+    // Gentle soft burst
+    this.spawnGentleBurst(x, y, 'sprinkler', 12);
         
         this.updateSprinklerDisplay();
         
@@ -7583,6 +8828,10 @@ class GardenGame {
             this.sprinklerInventory[sprinkler.type]++;
             this.sprinklers.splice(sprinklerIndex, 1);
             this.showMessage(`${sprinkler.type} sprinkler removed!`, 'info');
+            // Gentle soft burst for remove
+            const x = (col * this.cellSize) + (this.cellSize / 2);
+            const y = (row * this.cellSize) + (this.cellSize / 2);
+            this.spawnGentleBurst(x, y, 'remove', 10);
             this.updateSprinklerDisplay();
             this.saveGame();
         }
@@ -7659,8 +8908,12 @@ class GardenGame {
         const x = (col * this.cellSize) + (this.cellSize / 2);
         const y = (row * this.cellSize) + (this.cellSize / 2);
         this.addParticle(x, y, 'decoration', decorationData.icon);
+    // Gentle soft burst
+    this.spawnGentleBurst(x, y, 'decoration', 12);
         
         this.updateUI();
+        this.updateActiveBonusesDisplay();
+        this.updateBonusesPopup();
         this.saveGame();
     }
     
@@ -7680,6 +8933,12 @@ class GardenGame {
             this.garden[row][col].decoration = null;
 
             this.showMessage(`${decorationData.name} removed!${refundText}`, refundAmount > 0 ? 'success' : 'info');
+            // Gentle soft burst for remove
+            const x = (col * this.cellSize) + (this.cellSize / 2);
+            const y = (row * this.cellSize) + (this.cellSize / 2);
+            this.spawnGentleBurst(x, y, 'remove', 10);
+            this.updateActiveBonusesDisplay();
+            this.updateBonusesPopup();
             this.updateUI();
             this.saveGame();
         }
@@ -7945,6 +9204,70 @@ class GardenGame {
             achievementsList.appendChild(achievementElement);
         });
     }
+
+    // ===== ACTIVE BONUSES DISPLAY =====
+    computeGlobalBonusesSummary() {
+        const totals = { growth: 0, harvest: 0, water: 0, protection: 0 };
+        const items = {};
+        for (let r = 0; r < this.gridSize; r++) {
+            for (let c = 0; c < this.gridSize; c++) {
+                const deco = this.garden?.[r]?.[c]?.decoration;
+                if (!deco) continue;
+                const data = this.decorations?.[deco.type];
+                if (!data || data.bonus === 'none') continue;
+                if (data.scope !== 'global') continue;
+
+                // Track items count by type
+                if (!items[deco.type]) {
+                    items[deco.type] = { name: data.name || deco.type, icon: data.icon || '🌸', count: 0, bonus: data.bonus };
+                }
+                items[deco.type].count += 1;
+
+                // Parse percent from bonus string
+                const match = String(data.bonus).match(/(\d+)%/);
+                const pct = match ? parseInt(match[1], 10) : 0;
+                if (/harvest value/i.test(data.bonus)) totals.harvest += pct;
+                else if (/water efficiency/i.test(data.bonus)) totals.water += pct;
+                else if (/protection/i.test(data.bonus)) totals.protection += pct;
+                else if (/growth/i.test(data.bonus)) totals.growth += pct;
+            }
+        }
+        return { totals, items };
+    }
+
+    updateActiveBonusesDisplay() {
+        const list = document.getElementById('activeBonusesList');
+        if (!list) return;
+        const { totals, items } = this.computeGlobalBonusesSummary();
+        const entries = [];
+
+        const makeLine = (label, value, icon) => (
+            value > 0 ? `<li><span class="bonus-icon">${icon}</span> ${label}: <strong>+${value}%</strong></li>` : ''
+        );
+
+        entries.push(
+            makeLine('Growth', totals.growth, '🌱'),
+            makeLine('Harvest', totals.harvest, '💰'),
+            makeLine('Water efficiency', totals.water, '💧'),
+            makeLine('Protection', totals.protection, '🛡️')
+        );
+
+        // List active global decorations with counts
+        const itemKeys = Object.keys(items);
+        if (itemKeys.length) {
+            entries.push('<li class="bonus-divider" aria-hidden="true"></li>');
+            itemKeys.forEach(key => {
+                const it = items[key];
+                entries.push(`<li><span class="bonus-icon">${it.icon}</span> ${it.name} × ${it.count}</li>`);
+            });
+        } else {
+            if (!entries.some(Boolean)) {
+                entries.push('<li>No global bonuses yet</li>');
+            }
+        }
+
+        list.innerHTML = entries.filter(Boolean).join('');
+    }
     
     // Weather System
     updateWeather() {
@@ -7998,49 +9321,56 @@ class GardenGame {
     
     checkAchievementsSilent() {
         // First Harvest
-        if (this.achievementStats.totalHarvests >= 1 && !this.achievements.firstHarvest.unlocked) {
-            this.unlockAchievementSilent('firstHarvest');
+        if (this.achievementStats.totalHarvests >= 1) {
+            this.unlockAchievement('firstHarvest');
         }
         
         // Money Maker
-        if (this.achievementStats.totalMoney >= 100 && !this.achievements.moneyMaker.unlocked) {
-            this.unlockAchievementSilent('moneyMaker');
+        if (this.achievementStats.totalMoney >= 100) {
+            this.unlockAchievement('moneyMaker');
         }
         
         // Water Wizard
-        if (this.achievementStats.plantsWatered >= 20 && !this.achievements.waterWizard.unlocked) {
-            this.unlockAchievementSilent('waterWizard');
+        if (this.achievementStats.plantsWatered >= 20) {
+            this.unlockAchievement('waterWizard');
         }
         
         // Plant Master
-        if (this.achievementStats.differentPlantsPlanted.size >= 10 && !this.achievements.plantMaster.unlocked) {
-            this.unlockAchievementSilent('plantMaster');
+        if (this.achievementStats.differentPlantsPlanted.size >= 10) {
+            this.unlockAchievement('plantMaster');
         }
         
         // Fertilizer Fanatic
-        if (this.achievementStats.plantsFertilized >= 15 && !this.achievements.fertilizerFanatic.unlocked) {
-            this.unlockAchievementSilent('fertilizerFanatic');
+        if (this.achievementStats.plantsFertilized >= 15) {
+            this.unlockAchievement('fertilizerFanatic');
         }
         
         // Rare Collector
-        if (this.achievementStats.rareHarvests >= 5 && !this.achievements.rareCollector.unlocked) {
-            this.unlockAchievementSilent('rareCollector');
+        if (this.achievementStats.rareHarvests >= 5) {
+            this.unlockAchievement('rareCollector');
         }
         
         // Legendary Farmer
-        if (this.achievementStats.legendaryHarvests >= 3 && !this.achievements.legendaryFarmer.unlocked) {
-            this.unlockAchievementSilent('legendaryFarmer');
+        if (this.achievementStats.legendaryHarvests >= 3) {
+            this.unlockAchievement('legendaryFarmer');
         }
         
-        // Speed Grower achievement is checked in updatePlants() when a plant becomes fully grown
+        // Speed Grower achievement is handled when a plant becomes fully grown within time limit
     }
     
     unlockAchievement(achievementId) {
+        // Guard against invalid ids
+        if (!this.achievements || !this.achievements[achievementId]) return;
+        // If already unlocked, do nothing
+        if (this.achievements[achievementId].unlocked) return;
+        
         this.unlockAchievementSilent(achievementId);
         this.showMessage(`Achievement Unlocked: ${this.achievements[achievementId].name}!`, 'success');
         this.playSound('achievement');
         this.updateAchievementsDisplay();
         this.updateUI();
+        // Persist immediately so unlock survives reloads
+        this.saveGame();
     }
     
     unlockAchievementSilent(achievementId) {
@@ -8199,6 +9529,10 @@ class GardenGame {
                 console.log('  admin.showAchievements() - Show achievements');
                 console.log('  admin.unlockAchievement(achievementId) - Unlock specific achievement');
                 console.log('');
+                console.log('🐢 PASSIVE GROWTH:');
+                console.log('  admin.togglePassiveGrowth() - Enable/disable passive growth');
+                console.log('  admin.setPassiveGrowth(minutes) - Set passive growth base minutes per stage');
+                console.log('');
                 console.log('📊 INFORMATION:');
                 console.log('  admin.getStatus() - Show game status');
                 console.log('  admin.help() - Show this help menu');
@@ -8217,6 +9551,19 @@ class GardenGame {
                 console.log('  admin.unlockAchievement("speedGrower") - Unlock Speed Grower achievement');
                 console.log('');
                 console.log('=====================================');
+            },
+            togglePassiveGrowth: () => {
+                this.passiveGrowthEnabled = !this.passiveGrowthEnabled;
+                console.log(`✅ Passive growth ${this.passiveGrowthEnabled ? 'ENABLED' : 'DISABLED'}`);
+            },
+            setPassiveGrowth: (minutes) => {
+                const m = Number(minutes);
+                if (!Number.isFinite(m) || m <= 0) {
+                    console.log('❌ setPassiveGrowth(minutes): minutes must be > 0');
+                    return;
+                }
+                this.passiveGrowthBaseMs = Math.round(m * 60 * 1000);
+                console.log(`✅ Passive growth base set to ${m} minute(s) per stage`);
             },
             restockAll: () => {
                 Object.keys(this.shopInventory).forEach(seedType => {
@@ -8495,6 +9842,9 @@ class GardenGame {
                 if (data.challenges) this.challenges = data.challenges;
                 if (data.lastChallengeUpdate) this.lastChallengeUpdate = data.lastChallengeUpdate;
 
+                // Load Quick Seeds preferences
+                if (Array.isArray(data.seedRecent)) this.seedRecent = data.seedRecent; else this.seedRecent = this.seedRecent || [];
+
                 
                 this.setGardenName(data.gardenName, { shouldSave: false });
                 console.log(`Successfully loaded game for slot ${this.saveSlot}`);
@@ -8510,6 +9860,7 @@ class GardenGame {
                     this.updateAchievementsDisplay();
                     this.updateChallengesDisplay();
                     this.updateSeasonDisplay();
+                    try { this.updateQuickSeedsBar(); } catch (_) {}
                 }
                 
             } catch (error) {
@@ -10097,3 +11448,54 @@ window.addEventListener('beforeunload', () => {
         menuSystem.stopBackgroundProcessing();
     }
 });
+
+// Global fallback: ensure a working toggle via keyboard and direct button click
+(() => {
+    if (window.__bonusesGlobalFallbackReady) return;
+    window.__bonusesGlobalFallbackReady = true;
+
+    function toggleBonusesPopupRaw(open) {
+        const pop = document.getElementById('bonusesPopup');
+        const fab = document.getElementById('bonusesFab');
+        if (!pop || !fab) return;
+        const shouldOpen = (typeof open === 'boolean') ? open : pop.hasAttribute('hidden');
+        if (shouldOpen) {
+            pop.removeAttribute('hidden');
+            pop.style.display = 'block';
+            fab.setAttribute('aria-expanded', 'true');
+            // Try to refresh content if the game instance exists
+            try { window.game && typeof window.game.updateBonusesPopup === 'function' && window.game.updateBonusesPopup(); } catch (e) {}
+        } else {
+            pop.setAttribute('hidden', '');
+            pop.style.display = 'none';
+            fab.setAttribute('aria-expanded', 'false');
+        }
+    }
+    window.toggleBonusesPopupRaw = toggleBonusesPopupRaw;
+
+    // Keybinding: B
+    document.addEventListener('keydown', (e) => {
+        const t = e.target;
+        const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+        if (typing) return;
+        if (e.key === 'b' || e.key === 'B') {
+            e.preventDefault();
+            console.log('[BonusesUI][Global] B pressed');
+            toggleBonusesPopupRaw();
+        }
+    });
+
+    // Direct button binding as ultimate fallback
+    const btn = document.getElementById('bonusesFab');
+    if (btn && !btn.dataset.globalFallbackBound) {
+        btn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            console.log('[BonusesUI][Global] FAB click');
+            toggleBonusesPopupRaw();
+        });
+        btn.dataset.globalFallbackBound = 'true';
+    }
+
+    console.log('[BonusesUI][Global] Fallback hotkey and click binding ready');
+})();

@@ -106,5 +106,111 @@
       </div>
     </a>
   </section>
+  <script>
+    // Two-tap behavior: first tap expands, second tap navigates.
+    (function () {
+      const cards = Array.from(document.querySelectorAll('.quick-card'));
+
+      function collapseAll(except) {
+        cards.forEach(c => {
+          if (c !== except) {
+            c.classList.remove('is-expanded');
+            // clear dynamic inline adjustments so star positions restore
+            c.style.removeProperty('--shift-x');
+            c.style.removeProperty('--shift-y');
+            c.style.removeProperty('--expanded-width');
+            c.style.removeProperty('--expanded-height');
+            c.style.removeProperty('top');
+            c.style.removeProperty('left');
+          }
+        });
+      }
+
+      function sizeAndNudgeToFit(card) {
+        // reset any previous adjustments
+        card.style.removeProperty('--shift-x');
+        card.style.removeProperty('--shift-y');
+        card.style.removeProperty('--expanded-width');
+        card.style.removeProperty('--expanded-height');
+
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const margin = Math.max(12, Math.min(24, Math.floor(vw * 0.04))); // clamp(12px,4vw,24px) approx
+
+        // After expanded styles apply, measure and correct
+        requestAnimationFrame(() => {
+          let rect = card.getBoundingClientRect();
+
+          // 1) Limit width if too wide for viewport
+          const maxWidth = vw - margin * 2;
+          if (rect.width > maxWidth) {
+            card.style.setProperty('--expanded-width', `${maxWidth}px`);
+          }
+
+          // Re-measure after width change
+          rect = card.getBoundingClientRect();
+
+          // 2) Nudge horizontally to keep within viewport
+          let shiftX = 0;
+          if (rect.left < margin) {
+            shiftX = margin - rect.left; // push right
+          } else if (rect.right > vw - margin) {
+            shiftX = (vw - margin) - rect.right; // pull left (negative)
+          }
+
+          if (shiftX !== 0) {
+            card.style.setProperty('--shift-x', `${Math.round(shiftX)}px`);
+          }
+
+          // 3) Nudge vertically if needed (rare but safe)
+          let shiftY = 0;
+          if (rect.top < margin) {
+            shiftY = margin - rect.top; // push down
+          } else if (rect.bottom > vh - margin) {
+            shiftY = (vh - margin) - rect.bottom; // pull up (negative)
+          }
+          if (shiftY !== 0) {
+            card.style.setProperty('--shift-y', `${Math.round(shiftY)}px`);
+          }
+        });
+      }
+
+      cards.forEach(card => {
+        // Skip cards explicitly disabled
+        if (card.getAttribute('aria-disabled') === 'true') return;
+
+        card.addEventListener('click', (e) => {
+          // If not expanded yet, expand and cancel navigation
+          if (!card.classList.contains('is-expanded')) {
+            e.preventDefault();
+            collapseAll(card);
+            card.classList.add('is-expanded');
+            try { card.focus({ preventScroll: false }); } catch (_) { /* ignore */ }
+            sizeAndNudgeToFit(card);
+            return;
+          }
+          // If already expanded, allow default navigation
+          // Also collapse others to clean up when leaving/target=_blank
+          collapseAll();
+        });
+      });
+
+      // Collapse when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.quick-card')) collapseAll();
+      });
+
+      // Collapse on Escape for accessibility
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') collapseAll();
+      });
+
+      // Refit on resize/orientation changes
+      window.addEventListener('resize', () => {
+        const expanded = document.querySelector('.quick-card.is-expanded');
+        if (expanded) sizeAndNudgeToFit(expanded);
+      });
+    })();
+  </script>
 </body>
 </html>
