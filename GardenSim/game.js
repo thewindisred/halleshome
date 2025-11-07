@@ -232,13 +232,19 @@ class GardenGame {
             shovel: 1,
             harvest: 1
         };
-        
-        this.toolUpgradeCosts = {
-            water: 50,
-            fertilizer: 300, // Fertilizer upgrades are now much more expensive
-            shovel: 25,
-            harvest: 100
+
+        // Unified upgrade pricing model (much more expensive for game-changing tools)
+        // cost(next level) = base * growth^(currentLevel - 1)
+        this.toolUpgradeConfig = {
+            // Expensive curve (one notch harsher)
+            water:      { base: 200, growth: 2.6 },
+            fertilizer: { base: 350, growth: 2.8 },
+            harvest:    { base: 250, growth: 2.6 },
+            shovel:     { base: 50,  growth: 1.6 }
         };
+
+        this.toolUpgradeCosts = { water: 0, fertilizer: 0, shovel: 0, harvest: 0 };
+        this.recomputeAllToolUpgradeCosts();
 
         // Base shop prices for essentials (used by dynamic pricing helpers)
         // Keep these modest; tool levels reduce price via getToolPriceMultiplier()
@@ -3748,7 +3754,8 @@ class GardenGame {
                 // Admin command: upgrade tool without money cost
                 if (this.toolLevels[toolType] < 5) {
                     this.toolLevels[toolType]++;
-                    this.toolUpgradeCosts[toolType] = Math.floor(this.toolUpgradeCosts[toolType] * 1.5);
+                    // Recompute next cost from unified pricing model
+                    this.recomputeToolUpgradeCost(toolType);
                     
                     // Add resource bonuses for water and fertilizer tools
                     if (toolType === 'water') {
@@ -7870,7 +7877,7 @@ class GardenGame {
         this.lastRestockTime = now;
 
     this.toolLevels = { water: 1, fertilizer: 1, shovel: 1, harvest: 1 };
-    this.toolUpgradeCosts = { water: 50, fertilizer: 300, shovel: 100, harvest: 60 };
+    this.recomputeAllToolUpgradeCosts();
         this.harvestBonus = 0;
 
         this.selectedSeed = null;
@@ -8265,13 +8272,8 @@ class GardenGame {
             shovel: 1,
             harvest: 1
         };
-        
-        this.toolUpgradeCosts = {
-            water: 50,
-            fertilizer: 75,
-            shovel: 100,
-            harvest: 60
-        };
+        // Use unified pricing model for next-level costs
+        this.recomputeAllToolUpgradeCosts();
         
         // Harvest bonus from upgraded harvest tool
         this.harvestBonus = 0;
@@ -8513,6 +8515,24 @@ class GardenGame {
     }
     
     // Tool Upgrade System
+    getToolUpgradeCostForNext(toolType) {
+        const level = (this.toolLevels && this.toolLevels[toolType]) || 1;
+        const cfg = (this.toolUpgradeConfig && this.toolUpgradeConfig[toolType]) || { base: 100, growth: 2 };
+        const cost = Math.floor(cfg.base * Math.pow(cfg.growth, Math.max(0, level - 1)));
+        return Math.max(1, cost);
+    }
+
+    recomputeToolUpgradeCost(toolType) {
+        if (!this.toolUpgradeCosts) this.toolUpgradeCosts = {};
+        this.toolUpgradeCosts[toolType] = this.getToolUpgradeCostForNext(toolType);
+    }
+
+    recomputeAllToolUpgradeCosts() {
+        const tools = ['water', 'fertilizer', 'harvest', 'shovel'];
+        tools.forEach(t => this.recomputeToolUpgradeCost(t));
+        return this.toolUpgradeCosts;
+    }
+
     upgradeTool(toolType) {
         const currentLevel = this.toolLevels[toolType];
         
@@ -8521,7 +8541,7 @@ class GardenGame {
             return;
         }
         
-        const upgradeCost = this.toolUpgradeCosts[toolType];
+        const upgradeCost = this.getToolUpgradeCostForNext(toolType);
         
         // Check if player has enough money
         if (this.money < upgradeCost) {
@@ -8532,10 +8552,9 @@ class GardenGame {
         // Deduct money and upgrade tool
         this.money -= upgradeCost;
         this.toolLevels[toolType]++;
-        
-    // Increase cost for next upgrade (fertilizer scales much faster)
-    const multiplier = toolType === 'fertilizer' ? 2.25 : 1.5;
-    this.toolUpgradeCosts[toolType] = Math.floor(this.toolUpgradeCosts[toolType] * multiplier);
+
+        // Compute cost for the next level from the unified model
+        this.recomputeToolUpgradeCost(toolType);
         
         // Add resource bonuses for water and fertilizer tools
         if (toolType === 'water') {
@@ -9770,7 +9789,8 @@ class GardenGame {
                 
                 // Load tool data
                 if (data.toolLevels) this.toolLevels = data.toolLevels;
-                if (data.toolUpgradeCosts) this.toolUpgradeCosts = data.toolUpgradeCosts;
+                // Ignore legacy saved upgrade costs; recompute from new model for balance
+                this.recomputeAllToolUpgradeCosts();
                 if (data.harvestBonus !== undefined) this.harvestBonus = data.harvestBonus;
                 
                 // Load weather data
@@ -9866,6 +9886,9 @@ class GardenGame {
                 // Generate challenges if they don't exist
                 this.generateChallenges();
                 
+                // Ensure upgrade costs reflect new balance
+                this.recomputeAllToolUpgradeCosts();
+
                 // Update UI if canvas is available
                 if (this.canvas) {
                     this.updateUI();
